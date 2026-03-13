@@ -1,10 +1,10 @@
-##繁簡轉換器使用方法：  
+## 繁簡轉換器使用方法：  
 把以下三個檔案下載到同一個目錄，用瀏覽器打開"繁簡轉換器.html"即可使用  
 full.js  
 iconv-browser.js  
 繁簡轉換器.html  
 
-##以下說明只是讓使用者可以從別處取得js檔
+## 以下說明只是讓使用者可以從別處取得js檔  
 檔案來源：full.js  
 從專案 OpenCC 下載  
 https://github.com/nk2028/opencc-js/tree/main/src  
@@ -30,4 +30,5 @@ window.iconv = iconv
 
 檔案來源：繁簡轉換器.html  
 本人製作  
+
 
