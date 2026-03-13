@@ -1,15 +1,15 @@
 # 繁簡轉換器使用方法：  
-把以下三個檔案下載到同一個目錄，用瀏覽器打開"繁簡轉換器.html"即可使用  
+把以下三個檔案下載到同一個目錄，用瀏覽器打開"繁簡轉換器_介面美化.html"  
 full.js  
 iconv-browser.js  
-繁簡轉換器.html  
+繁簡轉換器_介面美化.html
 
 ## 以下說明只是讓使用者可以從別處取得js檔  
-檔案來源：full.js  
+full.js：  
 從專案 OpenCC 下載  
 https://github.com/nk2028/opencc-js/tree/main/src  
 
-檔案來源：iconv-browser.js  
+iconv-browser.js：  
 專案 iconv-lite 網址  
 https://github.com/pillarjs/iconv-lite/tree/master  
 無法直接在網頁上連結使用，因為它是 Node.js 套件。  
@@ -28,9 +28,8 @@ window.iconv = iconv
 回到目錄下，執行 npx browserify main.js -o iconv-browser.js  
 這樣就會打包成瀏覽器版本，也就是現在使用的檔案 iconv-browser.js  
 
-檔案來源：繁簡轉換器.html  
-本人製作  
+繁簡轉換器.html：  
+本人製作於2026.3.12  
 
-
-
-
+繁簡轉換器_介面美化.html：  
+本人更新於2026.3.13  
