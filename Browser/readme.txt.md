@@ -33,7 +33,7 @@ window.iconv = iconv
 本人製作於2026.3.12  
 
 GBK_BIG5_UI.html：  
-本人更新於2026.3.14  
+本人美化介面，更新於2026.3.14  
 
 繁簡轉換器_介面美化_合併單檔.html：  
 把full.js和iconv-browser.js的內容全部塞進GBK_BIG5_UI.html檔案裡而已  
