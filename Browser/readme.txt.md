@@ -1,8 +1,8 @@
 # 繁簡轉換器使用方法：  
-把以下三個檔案下載到同一個目錄，用瀏覽器打開"繁簡轉換器_介面美化.html"即可  
+把以下三個檔案下載到同一個目錄，用瀏覽器打開"GBK_BIG5_UI.html"即可  
 - full.js  
 - iconv-browser.js  
-- 繁簡轉換器_介面美化.html  
+- GBK_BIG5_UI.html  
 
 
 ## 以下只是說明檔案來源，可以跳過  
@@ -32,10 +32,10 @@ window.iconv = iconv
 繁簡轉換器.html：  
 本人製作於2026.3.12  
 
-繁簡轉換器_介面美化.html：  
-本人更新於2026.3.13  
+GBK_BIG5_UI.html：  
+本人更新於2026.3.14  
 
 繁簡轉換器_介面美化_合併單檔.html：  
-把full.js和iconv-browser.js的內容全部塞進繁簡轉換器_介面美化.html檔案裡而已  
-沒有任何不同，唯一好處是單一檔案就能使用。  
+把full.js和iconv-browser.js的內容全部塞進GBK_BIG5_UI.html檔案裡而已  
+跟"GBK_BIG5_UI.html"沒有任何不同的功能，唯一好處是單一檔案就能使用。  
 
