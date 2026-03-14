@@ -7219,6 +7219,27 @@ input[type="checkbox"]{
 margin-right:5px;
 }
 
+.top-controls{
+display:flex;
+gap:10px;
+align-items:center;
+}
+
+#langSelect{
+padding:6px 10px;
+border-radius:6px;
+border:1px solid #ccc;
+font-size:14px;
+background:white;
+}
+
+body.dark #langSelect{
+background:#2c313a;
+color:#eee;
+border-color:#444;
+}
+
+
 /* ===== 深色模式（柔和版） ===== */
 
 body.dark{
@@ -7318,37 +7339,47 @@ gap:0px;
 
 <div class="container wide">
 <div class="topbar">
-<h1>繁簡轉換工具</h1>
-<button id="themeToggle">☀️ 淺色背景</button>
+<h1 data-i18n="title">繁簡轉換工具</h1>
+
+<div class="top-controls">
+<select id="langSelect">
+<option value="zh-TW">繁體介面</option>
+<option value="zh-CN">简体介面</option>
+<option value="en">English UI</option>
+</select>
+
+<button id="themeToggle" data-i18n="theme"></button>
 </div>
-<textarea id="input" placeholder="貼上文字..."></textarea>
+</div>
+<textarea id="input" placeholder="貼上文字..." data-i18n-placeholder="input"></textarea>
 
 <div class="section">
 
-<button class="primary" onclick="convert('t','cn')">繁體 → 簡體</button>
-<button class="primary" onclick="convert('cn','t')">簡體 → 繁體</button> 
-<button onclick="pasteFromClipboard()">剪貼簿複製到輸入</button>
+<button class="primary" onclick="convert('t','cn')" data-i18n="t2s">繁體 → 簡體</button>
+<button class="primary" onclick="convert('cn','t')" data-i18n="s2t">簡體 → 繁體</button> 
+<button onclick="pasteFromClipboard()" data-i18n="paste">剪貼簿複製到輸入</button>
 <label>
     <input type="checkbox" id="pasteAppend">
-    附加貼上
+    <span data-i18n="append">附加貼上</span>
+
 </label>
-<button style="float: right; margin-left: 10px;" onclick="clearInput()">清空輸入</button>
+<button style="float: right; margin-left: 10px;" onclick="clearInput()" data-i18n="clearInput">清空輸入</button>
 <br>
-<button onclick="fixGbkDisplayedAsBig5()">修復GBK亂碼 → 簡體</button>
-<button onclick="fixBig5DisplayedAsGbk()">修復BIG5亂碼 → 繁體</button>
+<button onclick="fixGbkDisplayedAsBig5()" data-i18n="fixGbk">修復GBK亂碼 → 簡體</button>
+<button onclick="fixBig5DisplayedAsGbk()" data-i18n="fixBig5">修復BIG5亂碼 → 繁體</button>
 <label>
     <input type="checkbox" id="useCustomFixMap" checked>
-    修復時套用自定義修復表
+    <span data-i18n="customFix">修復時套用自定義修復表</span>
 </label>
 
 <br>
 
-<button onclick="copyOutputToClipboard()">輸出複製到剪貼簿</button>
-<button onclick="swapInputOutput()">↕內容互換</button>
-<button style="float: right; margin-left: 10px;" onclick="clearOutput()">清空輸出</button>
+<button onclick="copyOutputToClipboard()" data-i18n="copyOutput">輸出複製到剪貼簿</button>
+<button onclick="swapInputOutput()" data-i18n="swap">↕內容互換</button>
+<button style="float: right; margin-left: 10px;" onclick="clearOutput()" data-i18n="clearOutput">清空輸出</button>
 </div>
 <br>
-<textarea id="output" placeholder="結果..."></textarea>
+<textarea id="output" placeholder="結果..." data-i18n-placeholder="output"></textarea>
 
 <script>
 
@@ -7574,7 +7605,7 @@ function copyOutputToClipboard() {
     const originalText = btn.textContent;
     
     navigator.clipboard.writeText(text).then(() => {
-        btn.textContent = "已複製到剪貼簿 ✓";
+        btn.textContent = t("clipboardCopy");
         btn.disabled = true;
         setTimeout(() => {
             btn.textContent = originalText;
@@ -7651,17 +7682,17 @@ function pasteFromClipboard() {
                 if (text.trim()) {
                     applyPastedText(text.trim(), inputEl, appendMode, btn, originalText);
                 } else {
-                    showFeedback(btn, "剪貼簿空的", originalText);
+                    showFeedback(btn, t("clipboardEmpty"), originalText);
                 }
             })
             .catch(err => {
                 console.error("Clipboard API 失敗:", err);
-                showFeedback(btn, "貼上失敗", originalText);
-                alert("無法自動讀取剪貼簿，請用 Ctrl+V 手動貼上。\n（瀏覽器安全限制，可能需點擊確認彈窗）");
+                showFeedback(btn, t("pasteFailed"), originalText);
+                alert(t("clipboardReadFail"));
             });
     } else {
-        showFeedback(btn, "瀏覽器不支援", originalText);
-        alert("你的瀏覽器不支援自動貼上，請用 Ctrl+V。");
+        showFeedback(btn, t("browserNotSupported"), originalText);
+        alert(t("clipboardNoSupport"));
     }
 }
 
@@ -7676,7 +7707,7 @@ function applyPastedText(text, inputEl, appendMode, btn, originalText) {
     inputEl.focus();
     inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
 
-    showFeedback(btn, "已貼上 ✓", originalText);
+    showFeedback(btn, t("clipboardPaste"), originalText);
 }
 
 function showFeedback(btn, msg, originalText) {
@@ -7689,14 +7720,17 @@ function showFeedback(btn, msg, originalText) {
 const themeBtn=document.getElementById("themeToggle")
 
 function setTheme(mode){
+
 if(mode==="dark"){
 document.body.classList.add("dark")
-themeBtn.textContent="🌙 深色背景"
 }else{
 document.body.classList.remove("dark")
-themeBtn.textContent="☀️ 淺色背景"
 }
+
 localStorage.setItem("theme",mode)
+
+updateI18n()
+
 }
 
 themeBtn.onclick=()=>{
@@ -7704,14 +7738,6 @@ const isDark=document.body.classList.contains("dark")
 setTheme(isDark?"light":"dark")
 }
 
-/* 載入時恢復主題 */
-
-window.addEventListener("load",()=>{
-const saved=localStorage.getItem("theme")
-if(saved==="dark"){
-setTheme("dark")
-}
-})
 
 /* 拖曳貼上（任何檔案都嘗試讀文字） */
 
@@ -7771,6 +7797,247 @@ inputBox.value = text
 }
 
 })
+
+
+
+const i18n = {
+
+"zh-TW":{
+
+title:"繁簡轉換工具",
+
+input:"貼上文字...",
+output:"結果...",
+
+t2s:"繁體 → 簡體",
+s2t:"簡體 → 繁體",
+
+paste:"剪貼簿複製到輸入",
+append:"附加貼上",
+
+clearInput:"清空輸入",
+
+fixGbk:"修復GBK亂碼 → 簡體",
+fixBig5:"修復BIG5亂碼 → 繁體",
+
+customFix:"修復時套用自定義修復表",
+
+copyOutput:"輸出複製到剪貼簿",
+swap:"↕內容互換",
+clearOutput:"清空輸出",
+
+theme:{
+light:"☀️ 淺色背景",
+dark:"🌙 深色背景"
+},
+
+clipboardEmpty:"剪貼簿空的",
+pasteFailed:"貼上失敗",
+browserNotSupported:"瀏覽器不支援",
+
+clipboardReadFail:
+"無法自動讀取剪貼簿，請用 Ctrl+V 手動貼上。\n（瀏覽器安全限制，可能需點擊確認彈窗）",
+
+clipboardNoSupport:
+"你的瀏覽器不支援自動貼上，請用 Ctrl+V。",
+
+clipboardCopy:"已複製 ✓",
+
+clipboardPaste:"已貼上 ✓"
+
+},
+
+"zh-CN":{
+
+title:"繁简转换工具",
+
+input:"粘贴文字...",
+output:"结果...",
+
+t2s:"繁体 → 简体",
+s2t:"简体 → 繁体",
+
+paste:"剪贴板复制到输入",
+append:"追加粘贴",
+
+clearInput:"清空输入",
+
+fixGbk:"修复GBK乱码 → 简体",
+fixBig5:"修复BIG5乱码 → 繁体",
+
+customFix:"修复时使用自定义修复表",
+
+copyOutput:"复制输出结果",
+swap:"↕交换内容",
+clearOutput:"清空输出",
+
+theme:{
+light:"☀️ 浅色背景",
+dark:"🌙 深色背景"
+},
+
+clipboardEmpty:"剪贴板是空的",
+pasteFailed:"粘贴失败",
+browserNotSupported:"浏览器不支持",
+
+clipboardReadFail:
+"无法自动读取剪贴板，请用 Ctrl+V 手动粘贴。\n（浏览器安全限制，可能需要确认弹窗）",
+
+clipboardNoSupport:
+"你的浏览器不支持自动粘贴，请使用 Ctrl+V。",
+
+clipboardCopy:"已复制 ✓",
+
+clipboardPaste:"已贴上 ✓"
+
+},
+
+en:{
+
+title:"Chinese Converter",
+
+input:"Paste text...",
+output:"Result...",
+
+t2s:"Traditional → Simplified",
+s2t:"Simplified → Traditional",
+
+paste:"Paste from Clipboard",
+append:"Append",
+
+clearInput:"Clear Input",
+
+fixGbk:"Fix GBK Garbled → Simplified",
+fixBig5:"Fix BIG5 Garbled → Traditional",
+
+customFix:"Apply custom fix table",
+
+copyOutput:"Copy Output",
+swap:"↕ Swap",
+clearOutput:"Clear Output",
+
+theme:{
+light:"☀️ Light Mode",
+dark:"🌙 Dark Mode"
+},
+
+clipboardEmpty:"Clipboard is empty",
+pasteFailed:"Paste failed",
+browserNotSupported:"Browser not supported",
+
+clipboardReadFail:
+"Unable to read clipboard automatically.\nPlease press Ctrl+V manually.",
+
+clipboardNoSupport:
+"Your browser does not support automatic paste.\nPlease use Ctrl+V.",
+
+clipboardCopy:"copied ✓",
+
+clipboardPaste:"pasted ✓"
+
+}
+
+}
+
+
+function setLang(lang){
+localStorage.setItem("lang", lang)
+updateI18n()
+}
+
+const langSelect=document.getElementById("langSelect")
+
+langSelect.onchange=()=>{
+setLang(langSelect.value)
+}
+
+/* 載入時恢復語言和主題 */
+
+window.addEventListener("load",()=>{
+
+const savedLang = localStorage.getItem("lang") || "zh-TW"
+langSelect.value = savedLang
+
+const savedTheme = localStorage.getItem("theme")
+if(savedTheme==="dark"){
+document.body.classList.add("dark")
+}
+
+updateI18n()
+
+})
+
+function updateI18n(){
+
+const lang = localStorage.getItem("lang") || "zh-TW"
+const mode = document.body.classList.contains("dark") ? "dark" : "light"
+
+document.querySelectorAll("[data-i18n]").forEach(el=>{
+
+const key = el.dataset.i18n
+let text = i18n[lang]?.[key]
+
+if(typeof text === "object"){
+text = text[mode]
+}
+
+if(text !== undefined){
+el.textContent = text
+}
+
+})
+
+document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
+
+const key = el.dataset.i18nPlaceholder
+const text = i18n[lang]?.[key]
+
+if(text !== undefined){
+el.placeholder = text
+}
+
+})
+
+}
+
+const missingI18n = new Set()
+function t(key){
+
+const lang = localStorage.getItem("lang") || "zh-TW"
+
+const dict = i18n[lang] || {}
+
+let text = dict[key]
+
+if(text === undefined){
+
+const id = lang+":"+key
+
+if(!missingI18n.has(id)){
+console.warn("⚠ missing i18n key:", key, "(lang:",lang+")")
+missingI18n.add(id)
+}
+
+return key
+
+}
+
+if(typeof text === "object"){
+
+const mode = document.body.classList.contains("dark") ? "dark" : "light"
+
+text = text[mode]
+
+if(text === undefined){
+console.warn("⚠ missing theme variant:", key, " (mode:", mode, ")")
+return key
+}
+
+}
+
+return text
+
+}
 
 </script>
 <!--
