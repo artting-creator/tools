@@ -463,4 +463,3 @@ eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
 });
 
   console.log('[OpenCC Final] 腳本完成初始化');
-});
