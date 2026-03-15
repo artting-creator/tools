@@ -1,6 +1,3 @@
-.then(r => r.text())
-.then(openccCode => {
-  eval(openccCode);
   console.log('[OpenCC Final] OpenCC 載入成功');
 
   const STORAGE_KEY = 'opencc_auto_mode';
