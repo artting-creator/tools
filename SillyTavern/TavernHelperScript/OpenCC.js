@@ -1,5 +1,5 @@
   console.log("[OpenCC] script start");
-// alert("OPENCC JS LOADED");
+
   const STORAGE_KEY = 'opencc_auto_mode';
   const TAG_STORAGE_KEY = 'opencc_custom_tag';
   const t = {
