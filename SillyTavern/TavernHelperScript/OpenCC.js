@@ -1,12 +1,13 @@
   console.log("[OpenCC] script start");
-
+// 清除舊 UI（避免更新腳本後殘留）
+$('.opencc-btn').remove();
   const STORAGE_KEY = 'opencc_auto_mode';
   const TAG_STORAGE_KEY = 'opencc_custom_tag';
   const t = {
     INPUT_TRAD: '輸入繁體',
     INPUT_SIMP: '输入简体',
-    LAST_TRAD: '本樓訊息繁體',
-    LAST_SIMP: '本楼讯息简体'
+    LAST_TRAD: '本樓繁體',
+    LAST_SIMP: '本楼简体'
   };
   const MENU_ID = 'th-custom-extension-menu-item';
   const MENU_NAME = 'OpenCC';
@@ -176,7 +177,7 @@ const convertLastMessage = async (msgId, mode) => {
       建立四個轉換按鈕
   ========================== */
   appendInexistentScriptButtons(
-    Object.values(t).map(name => ({ name, visible: true }))
+    Object.values(t).map(name => ({ name, visible: true, class: 'opencc-btn' }))
   );
 
   eventOn(getButtonEvent(t.INPUT_TRAD), () => convertInput('traditional'));
@@ -244,12 +245,53 @@ const convertLastMessage = async (msgId, mode) => {
     loadSetting();
     $('.th-custom-popup-ui').remove();
     $('.opencc-overlay').remove();
+if (!document.getElementById('opencc-mobile-style')) {
+  const style = document.createElement('style');
+  style.id = 'opencc-mobile-style';
+  style.innerHTML = `
+    @media (max-width:600px){
+      .th-custom-popup-ui{
+        width:92vw !important;
+        padding:18px !important;
+      }
 
+      .th-custom-popup-ui h3{
+        font-size:1.25em;
+      }
+
+      .th-custom-popup-ui label{
+        font-size:14px;
+      }
+  #custom-tag-input{
+    font-size:14px;
+  }
+    }
+  `;
+  document.head.appendChild(style);
+}
     const checkboxes = settings.map(item => `
-      <div style="display: flex; align-items: center; margin-bottom: 16px; gap: 12px;">
+ <div style="
+  display:flex;
+  align-items:flex-start;
+  margin-bottom:16px;
+  gap:12px;
+">
         <input type="checkbox" id="${item.id}" ${item.state ? 'checked' : ''}
-               style="margin: 0; width: 18px; height: 18px; flex-shrink: 0; accent-color: #f44336;"/>
-        <label for="${item.id}" style="margin: 0; cursor: pointer; white-space: nowrap; color: #eee;">
+style="
+margin:0;
+width:20px;
+height:20px;
+flex-shrink:0;
+accent-color:#f44336;
+cursor:pointer;
+">
+<label for="${item.id}" style="
+  margin:0;
+  cursor:pointer;
+  color:#eee;
+  line-height:1.4;
+  flex:1;
+">
           ${item.name}
         </label>
       </div>
@@ -259,25 +301,33 @@ const convertLastMessage = async (msgId, mode) => {
 
 const tagSection = `
   <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #444;">
-    <select id="tag-preset" style="width:100%; padding:8px; margin-bottom:8px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
-      <option value="[IMG_GEN]">例一"[IMG_GEN]"：[tag][/tag]格式</option>
-      <option value="<action>">例二"&lt;action&gt;"：&lt;tag&gt;&lt;/tag&gt;格式</option>
-      <option value="think target=|</thought>">例三"think target=|&lt;/thought&gt;"：tag1|tag2格式</option>
+    <select id="tag-preset" style="width:100%; padding:8px; font-size:18px; margin-bottom:8px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
+      <option value="[IMG]">例一[]：[tag][/tag]格式</option>
+      <option value="<action>">例二&lt;&gt;：&lt;tag&gt;&lt;/tag&gt;格式</option>
+      <option value="think target=|</thought>">例三|：tag1|tag2格式</option>
+     <option value="[IMG_GEN],< |」">例四多组：例1,例3</option>
     </select>
     <input type="text" id="custom-tag-input" value="${customTagValue}"
            placeholder="[tag] 或 <tag> 或 prefix|suffix"
-           style="width:100%; padding:10px; background:#1e1e1e; color:#eee; border:1px solid #555; border-radius:6px; font-family:monospace;">
+style="
+  width:100%;
+  padding:10px;
+  font-size:18px;
+  background:#1e1e1e;
+  color:#eee;
+  border:1px solid #555;
+  border-radius:6px;
+  font-family:monospace;
+">
 <div class="tag-help" style="margin-top:6px; font-size:0.85em; color:#aaa; line-height:1.4;">
   <div class="trad-text">
-    要勾選標籤內容轉為繁/簡體，設定標籤才有用<br>
-    支援格式：可設多組，用英文逗號分隔<br>
+    標籤支援格式如下，可參考範例<br>
     • 成對標籤[]<br>
     • 成對標籤<><br>
-    • 自訂標籤1|自訂標籤2<br>
+    • 自定義標籤1|自定義標籤2<br>
   </div>
   <div class="simp-text" style="display:none;">
-    要勾选标签内容转为繁/简体，设定标签才有用<br>
-    支持格式：可设多组，用英文逗号分隔<br>
+    标签支援格式如下，可参考范例<br>
     • 成对标签[]<br>
     • 成对标签<><br>
     • 自定义标签1|自定义标签2<br>
@@ -286,16 +336,31 @@ const tagSection = `
   </div>
 `;
 
-    const overlay = $('<div class="opencc-overlay" style="position:fixed;inset:0;z-index:999998;background:rgba(0,0,0,0.65);"></div>');
+    const overlay = $('<div class="opencc-overlay" style="position:fixed;inset:0;z-index:999998;background:rgba(0,0,0,0.65);overflow:hidden;"></div>');
     $('body').append(overlay);
 
-    const popup = $(`
-      <div class="th-custom-popup-ui" style="
-        position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-        width:400px; max-height:85vh; overflow-y:auto;
-        background:#2c2c2e; color:#eee; padding:24px; border-radius:12px;
-        z-index:999999; box-shadow:0 0 30px rgba(0,0,0,0.7);
-        font-family:system-ui, sans-serif;">
+const popup = $(`
+<div class="th-custom-popup-ui" style="
+position:fixed;
+top:6vh;
+left:50%;
+transform:translateX(-50%);
+
+width:min(92vw,420px);
+max-height:88vh;
+
+overflow-y:auto;
+-webkit-overflow-scrolling:touch;
+
+  background:#2c2c2e;
+  color:#eee;
+  padding:22px;
+  border-radius:12px;
+  z-index:999999;
+
+  box-shadow:0 0 30px rgba(0,0,0,0.7);
+  font-family:system-ui,sans-serif;
+">
         <h3 style="margin:0 0 20px; font-size:1.4em; text-align:center; color:#eee;">Setting</h3>
         ${checkboxes}
         ${tagSection}
@@ -313,13 +378,24 @@ if (helpDiv.length) {
   const tradText = helpDiv.find('.trad-text');
   const simpText = helpDiv.find('.simp-text');
 
-  helpDiv.on('mouseenter', function() {
+helpDiv.on('mouseenter', function() {
+  tradText.hide();
+  simpText.show();
+}).on('mouseleave', function() {
+  tradText.show();
+  simpText.hide();
+});
+
+// 手機：點擊切換
+helpDiv.on('click', function() {
+  if (simpText.is(':visible')) {
+    simpText.hide();
+    tradText.show();
+  } else {
     tradText.hide();
     simpText.show();
-  }).on('mouseleave', function() {
-    tradText.show();
-    simpText.hide();
-  });
+  }
+});
 
   // 初始狀態顯示繁體
   tradText.show();
@@ -363,6 +439,7 @@ if (helpDiv.length) {
     presetSelect.on('change', function() {
       const val = this.value;
       tagInput.val(val);
+      tagInput.trigger('focus');   // 新增
       localStorage.setItem(TAG_STORAGE_KEY, val);
     });
 
@@ -379,11 +456,11 @@ if (helpDiv.length) {
     const menu = $('#extensionsMenu');
     if (!menu.length) return;
     const list = menu.find('.list-group').first().length ? menu.find('.list-group').first() : menu;
-    const btn = $(`
-      <a id="${MENU_ID}" class="list-group-item" href="javascript:void(0)">
-        <i class="fa-solid fa-language"></i> ${MENU_NAME}
-      </a>
-    `);
+const btn = $(`
+  <a id="${MENU_ID}" class="list-group-item opencc-btn" href="javascript:void(0)">
+    <i class="fa-solid fa-language"></i> ${MENU_NAME}
+  </a>
+`);
     btn.on('click', openSettingUI);
     list.append(btn);
   };
