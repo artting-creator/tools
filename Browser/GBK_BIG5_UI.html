@@ -281,8 +281,8 @@ gap:0px;
 
 <div class="section">
 
-<button class="primary" onclick="convert('t','cn')" data-i18n="t2s">繁體 → 簡體</button>
-<button class="primary" onclick="convert('cn','t')" data-i18n="s2t">簡體 → 繁體</button> 
+<button onclick="convert('t','cn')" data-i18n="t2s">繁體 → 簡體</button>
+<button onclick="convert('cn','t')" data-i18n="s2t">簡體 → 繁體</button> 
 <button onclick="pasteFromClipboard()" data-i18n="paste">剪貼簿複製到輸入</button>
 <label>
     <input type="checkbox" id="pasteAppend">
@@ -922,7 +922,27 @@ if(text !== undefined){
 el.placeholder = text
 }
 
-})
+});
+
+    // 動態調整兩個主要轉換按鈕的 .primary 樣式
+    const btnT2S = document.querySelector('button[data-i18n="t2s"]');
+    const btnS2T = document.querySelector('button[data-i18n="s2t"]');
+
+    if (!btnT2S || !btnS2T) return;  // 防呆
+
+    // 先移除兩個按鈕的 primary（避免殘留）
+    btnT2S.classList.remove("primary");
+    btnS2T.classList.remove("primary");
+
+    if (lang === "zh-TW") {
+        btnT2S.classList.add("primary");
+    } else if (lang === "zh-CN") {
+        btnS2T.classList.add("primary");
+    } else if (lang === "en") {
+        // 英文介面兩個都高亮
+        btnT2S.classList.add("primary");
+        btnS2T.classList.add("primary");
+    }
 
 }
 
