@@ -4,10 +4,10 @@ $('.opencc-btn').remove();
   const STORAGE_KEY = 'opencc_auto_mode';
   const TAG_STORAGE_KEY = 'opencc_custom_tag';
   const t = {
-    INPUT_TRAD: '輸入繁體',
-    INPUT_SIMP: '输入简体',
-    LAST_TRAD: '本樓繁體',
-    LAST_SIMP: '本楼简体'
+    INPUT_TRAD: '輸入轉繁⇄简',
+    INPUT_CLEAR: '清空',
+    LAST_TRAD: '本樓轉繁',
+    LAST_SIMP: '本楼转简'
   };
   const MENU_ID = 'th-custom-extension-menu-item';
   const MENU_NAME = 'OpenCC';
@@ -115,9 +115,32 @@ const convertCustomTags = (text, mode, configs) => {
   return result;
 };
 
-  /* =========================
-      四個按鈕功能
-  ========================== */
+/* =========================
+    狀態（輸入框切換用）
+========================= */
+let currentMode = 'traditional'; // 預設繁體
+
+// 👉 合併後的「輸入框轉換」按鈕
+eventOn(getButtonEvent(t.INPUT_TRAD), async () => {
+  await convertInput(currentMode);
+  // 切換模式
+  currentMode = currentMode === 'traditional' ? 'simplified' : 'traditional';
+});
+
+  // 清空功能
+eventOn(getButtonEvent(t.INPUT_CLEAR), () => clearInput());
+
+// 👉 保留「最後訊息轉換」兩顆（不合併）
+eventOn(getButtonEvent(t.LAST_TRAD), () =>
+  convertLastMessage(getLastMessageId(), 'traditional')
+);
+
+eventOn(getButtonEvent(t.LAST_SIMP), () =>
+  convertLastMessage(getLastMessageId(), 'simplified')
+);
+
+
+
   const convertInput = async (mode) => {
     const input = $('#send_textarea');
     if (!input.length) return toastr.error('找不到輸入框', '', {timeOut:1500});
@@ -127,6 +150,23 @@ const convertCustomTags = (text, mode, configs) => {
     input.val(convert(val, mode)).trigger('input').trigger('focus');
     toastr.success(mode === 'traditional' ? '已轉成繁體' : '已转成简体', '', {timeOut:1100});
   };
+
+const clearInput = () => {
+  const input = $('#send_textarea');
+  if (!input.length) {
+    return toastr.error('找不到輸入框', '', { timeOut: 1500 });
+  }
+
+  const val = String(input.val() ?? '');
+  if (!val) return; // 沒內容就不問
+  // ✅ 確認視窗
+  if (!confirm('確認清空輸入內容')) return;
+
+  input.val('').trigger('input').trigger('focus');
+  toastr.success('已清空輸入', '', { timeOut: 1100 });
+};
+
+
 
 const convertLastMessage = async (msgId, mode) => {
   const msgs = getChatMessages(msgId);
@@ -173,17 +213,17 @@ const convertLastMessage = async (msgId, mode) => {
   }
 };
 
-  /* =========================
-      建立四個轉換按鈕
-  ========================== */
-  appendInexistentScriptButtons(
-    Object.values(t).map(name => ({ name, visible: true, class: 'opencc-btn' }))
-  );
+/* =========================
+    建立按鈕（加上 id）
+========================= */
+appendInexistentScriptButtons([
+  { name: t.INPUT_TRAD, visible: true, id: 'btn-convert-input' },
+  { name: t.INPUT_CLEAR, visible: true, id: 'btn-clear-input' },
+  { name: t.LAST_TRAD, visible: true, id: 'btn-convert-last-trad' },
+  { name: t.LAST_SIMP, visible: true, id: 'btn-convert-last-simp' }
+]);
 
-  eventOn(getButtonEvent(t.INPUT_TRAD), () => convertInput('traditional'));
-  eventOn(getButtonEvent(t.INPUT_SIMP), () => convertInput('simplified'));
-  eventOn(getButtonEvent(t.LAST_TRAD), () => convertLastMessage(getLastMessageId(), 'traditional'));
-  eventOn(getButtonEvent(t.LAST_SIMP), () => convertLastMessage(getLastMessageId(), 'simplified'));
+//   Object.values(t).map(name => ({ name, visible: true }))
 
   /* =========================
       設定項目
