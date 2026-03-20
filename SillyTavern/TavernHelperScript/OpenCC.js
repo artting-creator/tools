@@ -151,6 +151,9 @@ eventOn(getButtonEvent(t.LAST_SIMP), () =>
     toastr.success(mode === 'traditional' ? '已轉成繁體' : '已转成简体', '', {timeOut:1100});
   };
 
+let clearConfirm = false;
+let clearTimer = null;
+
 const clearInput = () => {
   const input = $('#send_textarea');
   if (!input.length) {
@@ -158,13 +161,54 @@ const clearInput = () => {
   }
 
   const val = String(input.val() ?? '');
-  if (!val) return; // 沒內容就不問
-  // ✅ 確認視窗
-  if (!confirm('確認清空輸入內容')) return;
+  if (!val) return;
+
+  // 第一次點擊 → 提示
+  if (!clearConfirm) {
+    clearConfirm = true;
+flashDanger();
+    toastr.warning('再點一次「輸入清空」即可清除', '', {
+      timeOut: 1500
+    });
+
+    // 1.5秒內有效
+    clearTimer = setTimeout(() => {
+      clearConfirm = false;
+    }, 1500);
+
+    return;
+  }
+
+  // 第二次點擊 → 執行
+  clearConfirm = false;
+  clearTimer && clearTimeout(clearTimer);
 
   input.val('').trigger('input').trigger('focus');
+
   toastr.success('已清空輸入', '', { timeOut: 1100 });
 };
+
+const flashDanger = () => {
+  const btn = $(`.menu_button:contains("${t.INPUT_CLEAR}")`);
+  if (!btn.length) return;
+
+  btn.css({
+    backgroundColor: '#e74c3c',
+    color: '#fff',
+    borderColor: '#e74c3c',
+    transition: 'all 0.2s ease'
+  });
+
+  setTimeout(() => {
+    btn.css({
+      backgroundColor: '',
+      color: '',
+      borderColor: '',
+    });
+  }, 1500);
+};
+
+
 
 
 
