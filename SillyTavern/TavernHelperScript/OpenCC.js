@@ -1,5 +1,7 @@
+(async function() {
+  // 把所有程式碼移到async裡面
   console.log("[OpenCC] script start");
-// 清除舊 UI（避免更新腳本後殘留）
+
 $('.opencc-btn').remove();
   const STORAGE_KEY = 'opencc_auto_mode';
   const TAG_STORAGE_KEY = 'opencc_custom_tag';
@@ -244,7 +246,7 @@ const convertLastMessage = async (msgId, mode) => {
   const msg = String(msgs[0].message ?? '');
   if (!msg) return;
 
-  await ensureConverter();
+//  await ensureConverter();
 
   let newMsg = await convert(msg, mode);
 
@@ -586,7 +588,7 @@ const btn = $(`
 eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
   if (msgId !== getLastMessageId()) return;
 
-  await ensureConverter();
+//  await ensureConverter();
 
   const msgs = getChatMessages(msgId);
   if (!msgs?.[0]) return;
@@ -650,3 +652,4 @@ eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
 });
 
   console.log('[OpenCC Final] 腳本完成初始化');
+})();
