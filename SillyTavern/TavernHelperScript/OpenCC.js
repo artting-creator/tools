@@ -189,13 +189,22 @@ eventOn(getButtonEvent(t.LAST_SIMP), () =>
 const convertInput = async (mode) => {
   const input = $('#send_textarea');
   if (!input.length) return toastr.error('找不到輸入框', '', { timeOut: 1500 });
-  const val = String(input.val() ?? '');
+  let val = String(input.val() ?? '').trim();
   if (!val) return;
-//  await ensureConverter();
+
+  // 先把按鈕變灰或顯示 loading（可選）
+  const btn = $(`.menu_button:contains("${t.INPUT_TRAD}")`);
+  btn.prop('disabled', true).text('轉換中...');
+
+  const converted = await convert(val, mode);
+
   input
-    .val(await convert(val, mode)) // ✅ 這行是關鍵
+    .val(converted)
     .trigger('input')
     .trigger('focus');
+
+  btn.prop('disabled', false).text(t.INPUT_TRAD);
+
   toastr.success(
     mode === 'traditional' ? '已轉成繁體' : '已转成简体',
     '',
