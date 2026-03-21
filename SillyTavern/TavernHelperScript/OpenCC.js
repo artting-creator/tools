@@ -11,28 +11,33 @@ $('.opencc-btn').remove();
     LAST_TRAD: '本樓轉繁',
     LAST_SIMP: '本楼转简'
   };
+
+const VARIANT_STORAGE_KEY = 'opencc_trad_variant';  // 跟 TAG_STORAGE_KEY 平級
+const DEFAULT_VARIANT = 't';  // 官版
+
   const MENU_ID = 'th-custom-extension-menu-item';
   const MENU_NAME = 'OpenCC';
 
-  let convSimp = null;
-  let convTrad = null;
 
-  /* =========================
-      轉換初始化，避免重複載入
-  ========================== */
+let convTradT = null;   // 官版 t
+let convTradTW = null;  // 台版 tw
+let convTradHK = null;  // 港版 hk
+let convSimp = null;
 let loading = null;
-  const ensureConverter = async () => {
-    if (convSimp && convTrad) return;
+
+const ensureConverter = async () => {
+  if (convTradT && convTradTW && convTradHK && convSimp) return;
   if (loading) return loading;
 
   loading = (async () => {
-const { default: OpenCC } = await import(
-  'https://cdn.jsdelivr.net/npm/opencc-wasm/dist/esm/index.js'
-);
+    const { default: OpenCC } = await import(
+      'https://cdn.jsdelivr.net/npm/opencc-wasm/dist/esm/index.js'
+    );
 
-  // ⚠️ 這裡變 async（重要差異）
-  convTrad = await OpenCC.Converter({ from: 'cn', to: 't' });
-  convSimp = await OpenCC.Converter({ from: 't', to: 'cn' });
+    convTradT  = await OpenCC.Converter({ from: 'cn', to: 't' });
+    convTradTW = await OpenCC.Converter({ from: 'cn', to: 'tw' });
+    convTradHK = await OpenCC.Converter({ from: 'cn', to: 'hk' });
+    convSimp   = await OpenCC.Converter({ from: 't', to: 'cn' });
   })();
   return loading;
 };
@@ -40,13 +45,20 @@ const { default: OpenCC } = await import(
 await ensureConverter(); // 一開始就載入一次
 
 const convert = async (text, mode) => {
-  const input = String(text ?? '');  // 加強防呆，永遠是 string
-  if (mode === 'traditional') {
-    return convTrad ? await convTrad(input) : input;
-  }
+  const input = String(text ?? '');
+
   if (mode === 'simplified') {
     return convSimp ? await convSimp(input) : input;
   }
+
+  if (mode === 'traditional') {
+    const variant = localStorage.getItem(VARIANT_STORAGE_KEY) || DEFAULT_VARIANT;
+    if (variant === 'tw') return convTradTW ? await convTradTW(input) : input;
+    if (variant === 'hk') return convTradHK ? await convTradHK(input) : input;
+    // 預設或 't'
+    return convTradT ? await convTradT(input) : input;
+  }
+
   return input;
 };
 
@@ -419,6 +431,22 @@ cursor:pointer;
       </div>
     `).join('');
 
+const variantSection = `
+  <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #444;">
+    <label for="trad-variant" style="display:block; margin-bottom:8px; color:#eee; font-size:1em;">
+      繁體選擇
+    </label>
+    <select id="trad-variant" style="width:100%; padding:10px; font-size:18px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
+      <option value="t" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 't' || !localStorage.getItem(VARIANT_STORAGE_KEY) ? 'selected' : ''}>官版 (t)</option>
+      <option value="tw" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'tw' ? 'selected' : ''}>台版 (tw)</option>
+      <option value="hk" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'hk' ? 'selected' : ''}>港版 (hk)</option>
+    </select>
+    <div style="margin-top:8px; font-size:0.9em; color:#aaa;">
+      影響：輸入框、本樓、自動回覆、標籤內容的所有繁體轉換
+    </div>
+  </div>
+`;
+
     const customTagValue = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
 
 const tagSection = `
@@ -486,6 +514,7 @@ overflow-y:auto;
         <h3 style="margin:0 0 20px; font-size:1.4em; text-align:center; color:#eee;">Setting</h3>
         ${checkboxes}
         ${tagSection}
+		${variantSection}
         <button type="button" class="menu_button th-custom-popup-close" style="
           margin-top:24px; width:100%; padding:12px; background:#f44336; color:white;
           border:none; border-radius:6px; cursor:pointer; font-size:1.1em; transition: background 0.2s;">
@@ -557,6 +586,7 @@ helpDiv.on('click', function() {
     // 自訂標籤輸入事件
     const presetSelect = popup.find('#tag-preset');
     const tagInput = popup.find('#custom-tag-input');
+const variantSelect = popup.find('#trad-variant');
 
     presetSelect.on('change', function() {
       const val = this.value;
@@ -568,6 +598,16 @@ helpDiv.on('click', function() {
     tagInput.on('input', function() {
       localStorage.setItem(TAG_STORAGE_KEY, this.value.trim());
     });
+
+// 新增：繁體變體選擇
+variantSelect.on('change', function() {
+  const val = this.value;
+  localStorage.setItem(VARIANT_STORAGE_KEY, val);
+  toastr.success(`已切換為 ${val === 't' ? '官版' : val === 'tw' ? '台版' : '港版'}繁體`, '', {timeOut: 1500});
+  // 不用清 conv 也不用 await ensureConverter()，因為已經預載了
+});
+
+
   };
 
   /* =========================
