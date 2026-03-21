@@ -115,25 +115,37 @@ const parseSingleTag = (input) => {
 };
 
   /* 通用 tag 轉換函式（支援自訂前後綴） */
-const convertCustomTags = (text, mode, configs) => {
+const convertCustomTags = async (text, mode, configs) => {
   if (mode !== 'traditional' && mode !== 'simplified') return text;
   if (!configs.length) return text;
-// 這裡加強防呆：強制轉成字串，避免傳進來的 text 是 Promise、undefined、null 等
-let result = String(text ?? '');
+
+  // 強制轉成字串，防呆上游傳入 Promise / undefined 等
+  let result = String(text ?? '');
+
   for (const config of configs) {
     const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const openEsc = escapeRegex(config.open);
     const closeEsc = escapeRegex(config.close);
-// 避免空標籤導致無效 regex
+
+    // 避免無效標籤
     if (!openEsc || !closeEsc) continue;
+
     const regex = new RegExp(`${openEsc}([\\s\\S]*?)${closeEsc}`, 'gi');
 
-result = result.replace(regex, async (match, inner) => {   // 注意這裡也要 async
-  const safeInner = String(inner ?? '').trim();
-  const convertedInner = await convert(safeInner, mode);   // 加 await
-  return `${config.open}${String(convertedInner ?? safeInner)}${config.close}`;
-});
+    // 先抓出所有匹配，避免在迴圈中修改 result 影響迭代器
+    const matches = [...result.matchAll(regex)];
+
+    for (const match of matches) {
+      const inner = match[1] || '';  // 捕獲群組1，內容部分
+      const safeInner = String(inner).trim();
+      const convertedInner = await convert(safeInner, mode);
+      const replacement = `${config.open}${convertedInner}${config.close}`;
+
+      // 一次替換這一個匹配
+      result = result.replace(match[0], replacement);
+    }
   }
+
   return result;
 };
 
@@ -239,27 +251,24 @@ const flashDanger = () => {
 
 
 
-
 const convertLastMessage = async (msgId, mode) => {
   const msgs = getChatMessages(msgId);
   if (!msgs?.[0]) return;
   const msg = String(msgs[0].message ?? '');
   if (!msg) return;
 
-//  await ensureConverter();
-
+  // 因為頂層已 await ensureConverter()，這裡不用再等
   let newMsg = await convert(msg, mode);
 
-  // ── 這裡改成處理多個標籤 ──
+  // ── 處理多個自訂標籤 ──
   const tagMode = getState('tag-trad') ? 'traditional' :
                   getState('tag-simp') ? 'simplified' : null;
 
   if (tagMode) {
     const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
-    const tagConfigs = parseCustomTags(tagInput);  // 回傳陣列
-
+    const tagConfigs = parseCustomTags(tagInput);
     if (tagConfigs.length > 0) {
-      newMsg = convertCustomTags(newMsg, tagMode, tagConfigs);
+      newMsg = await convertCustomTags(newMsg, tagMode, tagConfigs);
     }
   }
   // ──────────────────────────────────────
@@ -272,16 +281,17 @@ const convertLastMessage = async (msgId, mode) => {
 
     let toastText = mode === 'traditional' ? '本樓已轉繁體' : '本楼已转简体';
 
-    // toast 顯示處理了幾個標籤（可選，建議保留）
+    // toast 顯示標籤數量（可選）
     const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
     const tagConfigs = parseCustomTags(tagInput);
-    if (tagMode && tagConfigs.length > 0) {
-      toastText += `（含 ${tagConfigs.length} 個標籤）`;
+    const tagCount = tagConfigs.length;
+    if (tagMode && tagCount > 0) {
+      toastText += `（含 ${tagCount} 個標籤）`;
     } else if (tagMode) {
       toastText += '（標籤無效）';
     }
 
-    toastr.success(toastText, '', {timeOut:1100});
+    toastr.success(toastText, '', { timeOut: 1100 });
   }
 };
 
@@ -588,36 +598,32 @@ const btn = $(`
 eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
   if (msgId !== getLastMessageId()) return;
 
-//  await ensureConverter();
-
   const msgs = getChatMessages(msgId);
   if (!msgs?.[0]) return;
-
   let msg = String(msgs[0].message || '');
   if (!msg) return;
 
   let newMsg = msg;
 
-  // Step 1: receive 模式（整則訊息）
+  // Step 1: receive 模式（整則訊息轉換）
   const receiveMode = getState('auto-trad') ? 'traditional' :
                       getState('auto-simp') ? 'simplified' : null;
   if (receiveMode) {
     newMsg = await convert(newMsg, receiveMode);
   }
 
-  // ── 這裡改成處理多個標籤 ──
+  // Step 2: 標籤模式（多個標籤內容轉換）
   const tagMode = getState('tag-trad') ? 'traditional' :
                   getState('tag-simp') ? 'simplified' : null;
   if (tagMode) {
     const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
     const tagConfigs = parseCustomTags(tagInput);
-
     if (tagConfigs.length > 0) {
-      newMsg = convertCustomTags(newMsg, tagMode, tagConfigs);
+      newMsg = await convertCustomTags(newMsg, tagMode, tagConfigs);
     }
   }
-  // ──────────────────────────────────────
 
+  // 如果有變化才更新
   if (newMsg !== msg) {
     await setChatMessages(
       [{ message_id: msgId, message: newMsg }],
@@ -625,8 +631,6 @@ eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
     );
 
     let toastText = '';
-
-    // 顯示更精確的訊息
     const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
     const tagConfigs = parseCustomTags(tagInput);
     const tagCount = tagConfigs.length;
@@ -641,8 +645,8 @@ eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
         : '已转为简体';
     } else if (tagMode && tagCount > 0) {
       toastText = tagMode === 'traditional'
-        ? ` ${tagCount} 個標籤內容已轉為繁體`
-        : ` ${tagCount} 个标签内容已转为简体`;
+        ? `${tagCount} 個標籤內容已轉為繁體`
+        : `${tagCount} 个标签内容已转为简体`;
     }
 
     if (toastText) {
