@@ -16,20 +16,38 @@ $('.opencc-btn').remove();
   let convTrad = null;
 
   /* =========================
-      轉換初始化
+      轉換初始化，避免重複載入
   ========================== */
+let loading = null;
   const ensureConverter = async () => {
     if (convSimp && convTrad) return;
-    const module = await import('https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm');
-    convTrad = module.Converter({ from: 'cn', to: 't' });
-    convSimp = module.Converter({ from: 't', to: 'cn' });
-  };
+  if (loading) return loading;
 
-  const convert = (text, mode) => {
-    if (mode === 'traditional') return convTrad?.(text) ?? text;
-    if (mode === 'simplified') return convSimp?.(text) ?? text;
-    return text;
-  };
+  loading = (async () => {
+const { default: OpenCC } = await import(
+  'https://cdn.jsdelivr.net/npm/opencc-wasm/dist/esm/index.js'
+);
+
+  // ⚠️ 這裡變 async（重要差異）
+  convTrad = await OpenCC.Converter({ from: 'cn', to: 't' });
+  convSimp = await OpenCC.Converter({ from: 't', to: 'cn' });
+  })();
+  return loading;
+};
+
+await ensureConverter(); // 一開始就載入一次
+
+const convert = async (text, mode) => {
+  const input = String(text ?? '');  // 加強防呆，永遠是 string
+  if (mode === 'traditional') {
+    return convTrad ? await convTrad(input) : input;
+  }
+  if (mode === 'simplified') {
+    return convSimp ? await convSimp(input) : input;
+  }
+  return input;
+};
+
 
   /* 自訂標籤解析函式 */
 const parseCustomTags = (input) => {
@@ -98,19 +116,21 @@ const parseSingleTag = (input) => {
 const convertCustomTags = (text, mode, configs) => {
   if (mode !== 'traditional' && mode !== 'simplified') return text;
   if (!configs.length) return text;
-
-  let result = text;
+// 這裡加強防呆：強制轉成字串，避免傳進來的 text 是 Promise、undefined、null 等
+let result = String(text ?? '');
   for (const config of configs) {
     const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const openEsc = escapeRegex(config.open);
     const closeEsc = escapeRegex(config.close);
-
+// 避免空標籤導致無效 regex
+    if (!openEsc || !closeEsc) continue;
     const regex = new RegExp(`${openEsc}([\\s\\S]*?)${closeEsc}`, 'gi');
 
-    result = result.replace(regex, (match, inner) => {
-      const convertedInner = convert(inner.trim(), mode);
-      return `${config.open}${convertedInner}${config.close}`;
-    });
+result = result.replace(regex, async (match, inner) => {   // 注意這裡也要 async
+  const safeInner = String(inner ?? '').trim();
+  const convertedInner = await convert(safeInner, mode);   // 加 await
+  return `${config.open}${String(convertedInner ?? safeInner)}${config.close}`;
+});
   }
   return result;
 };
@@ -140,16 +160,22 @@ eventOn(getButtonEvent(t.LAST_SIMP), () =>
 );
 
 
-
-  const convertInput = async (mode) => {
-    const input = $('#send_textarea');
-    if (!input.length) return toastr.error('找不到輸入框', '', {timeOut:1500});
-    const val = String(input.val() ?? '');
-    if (!val) return;
-    await ensureConverter();
-    input.val(convert(val, mode)).trigger('input').trigger('focus');
-    toastr.success(mode === 'traditional' ? '已轉成繁體' : '已转成简体', '', {timeOut:1100});
-  };
+const convertInput = async (mode) => {
+  const input = $('#send_textarea');
+  if (!input.length) return toastr.error('找不到輸入框', '', { timeOut: 1500 });
+  const val = String(input.val() ?? '');
+  if (!val) return;
+//  await ensureConverter();
+  input
+    .val(await convert(val, mode)) // ✅ 這行是關鍵
+    .trigger('input')
+    .trigger('focus');
+  toastr.success(
+    mode === 'traditional' ? '已轉成繁體' : '已转成简体',
+    '',
+    { timeOut: 1100 }
+  );
+};
 
 let clearConfirm = false;
 let clearTimer = null;
@@ -220,7 +246,7 @@ const convertLastMessage = async (msgId, mode) => {
 
   await ensureConverter();
 
-  let newMsg = convert(msg, mode);
+  let newMsg = await convert(msg, mode);
 
   // ── 這裡改成處理多個標籤 ──
   const tagMode = getState('tag-trad') ? 'traditional' :
@@ -574,7 +600,7 @@ eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
   const receiveMode = getState('auto-trad') ? 'traditional' :
                       getState('auto-simp') ? 'simplified' : null;
   if (receiveMode) {
-    newMsg = convert(newMsg, receiveMode);
+    newMsg = await convert(newMsg, receiveMode);
   }
 
   // ── 這裡改成處理多個標籤 ──
