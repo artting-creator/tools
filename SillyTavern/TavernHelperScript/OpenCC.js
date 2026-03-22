@@ -29,7 +29,7 @@ const ensureConverter = async () => {
   convSimp = module.Converter({ from: 't', to: 'cn' });
 };
 
-await ensureConverter(); // 一開始就載入一次
+ensureConverter(); // 一開始就載入一次
 
 const convert = (text, mode) => {
   const input = String(text ?? '');
