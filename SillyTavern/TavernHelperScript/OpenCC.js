@@ -1,5 +1,4 @@
-(async function() {
-  // 把所有程式碼移到async裡面
+
   console.log("[OpenCC] script start");
 
 $('.opencc-btn').remove();
@@ -19,46 +18,23 @@ const DEFAULT_VARIANT = 't';  // 官版
   const MENU_NAME = 'OpenCC';
 
 
-let convTradT = null;   // 官版 t
-let convTradTW = null;  // 台版 tw
-let convTradHK = null;  // 港版 hk
+let convTrad = null;   // 官版 t
 let convSimp = null;
-let loading = null;
+
 
 const ensureConverter = async () => {
-  if (convTradT && convTradTW && convTradHK && convSimp) return;
-  if (loading) return loading;
-
-  loading = (async () => {
-    const { default: OpenCC } = await import(
-      'https://cdn.jsdelivr.net/npm/opencc-wasm/dist/esm/index.js'
-    );
-
-    convTradT  = await OpenCC.Converter({ from: 'cn', to: 't' });
-    convTradTW = await OpenCC.Converter({ from: 'cn', to: 'tw' });
-    convTradHK = await OpenCC.Converter({ from: 'cn', to: 'hk' });
-    convSimp   = await OpenCC.Converter({ from: 't', to: 'cn' });
-  })();
-  return loading;
+  if (convTrad && convSimp) return;
+  const module = await import('https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm');
+  convTrad = module.Converter({ from: 'cn', to: localStorage.getItem(VARIANT_STORAGE_KEY) || 't' });
+  convSimp = module.Converter({ from: 't', to: 'cn' });
 };
 
 await ensureConverter(); // 一開始就載入一次
 
-const convert = async (text, mode) => {
+const convert = (text, mode) => {
   const input = String(text ?? '');
-
-  if (mode === 'simplified') {
-    return convSimp ? await convSimp(input) : input;
-  }
-
-  if (mode === 'traditional') {
-    const variant = localStorage.getItem(VARIANT_STORAGE_KEY) || DEFAULT_VARIANT;
-    if (variant === 'tw') return convTradTW ? await convTradTW(input) : input;
-    if (variant === 'hk') return convTradHK ? await convTradHK(input) : input;
-    // 預設或 't'
-    return convTradT ? await convTradT(input) : input;
-  }
-
+  if (mode === 'traditional') return convTrad?.(input) ?? input;
+  if (mode === 'simplified') return convSimp?.(input) ?? input;
   return input;
 };
 
@@ -150,7 +126,7 @@ const convertCustomTags = async (text, mode, configs) => {
     for (const match of matches) {
       const inner = match[1] || '';  // 捕獲群組1，內容部分
       const safeInner = String(inner).trim();
-      const convertedInner = await convert(safeInner, mode);
+      const convertedInner = convert(safeInner, mode);
       const replacement = `${config.open}${convertedInner}${config.close}`;
 
       // 一次替換這一個匹配
@@ -192,18 +168,11 @@ const convertInput = async (mode) => {
   let val = String(input.val() ?? '').trim();
   if (!val) return;
 
-  // 先把按鈕變灰或顯示 loading（可選）
-  const btn = $(`.menu_button:contains("${t.INPUT_TRAD}")`);
-  btn.prop('disabled', true).text('轉換中...');
-
-  const converted = await convert(val, mode);
-
+  const converted = convert(val, mode);
   input
     .val(converted)
     .trigger('input')
     .trigger('focus');
-
-  btn.prop('disabled', false).text(t.INPUT_TRAD);
 
   toastr.success(
     mode === 'traditional' ? '已轉成繁體' : '已转成简体',
@@ -279,7 +248,7 @@ const convertLastMessage = async (msgId, mode) => {
   if (!msg) return;
 
   // 因為頂層已 await ensureConverter()，這裡不用再等
-  let newMsg = await convert(msg, mode);
+  let newMsg = convert(msg, mode);
 
   // ── 處理多個自訂標籤 ──
   const tagMode = getState('tag-trad') ? 'traditional' :
@@ -658,7 +627,7 @@ eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
   const receiveMode = getState('auto-trad') ? 'traditional' :
                       getState('auto-simp') ? 'simplified' : null;
   if (receiveMode) {
-    newMsg = await convert(newMsg, receiveMode);
+    newMsg = convert(newMsg, receiveMode);
   }
 
   // Step 2: 標籤模式（多個標籤內容轉換）
@@ -705,4 +674,3 @@ eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
 });
 
   console.log('[OpenCC Final] 腳本完成初始化');
-})();
