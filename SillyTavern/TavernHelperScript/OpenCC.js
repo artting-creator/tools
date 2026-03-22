@@ -11,30 +11,47 @@ $('.opencc-btn').remove();
     LAST_SIMP: '本楼转简'
   };
 
-const VARIANT_STORAGE_KEY = 'opencc_trad_variant';  // 跟 TAG_STORAGE_KEY 平級
+const VARIANT_STORAGE_KEY = 'opencc_trad_variant';
 const DEFAULT_VARIANT = 't';  // 官版
 
   const MENU_ID = 'th-custom-extension-menu-item';
   const MENU_NAME = 'OpenCC';
 
 
-let convTrad = null;   // 官版 t
+// 頂層變數：三個 converter
+let convTradT = null;   // 官版 t
+let convTradTW = null;  // 台版 tw
+let convTradHK = null;  // 港版 hk
 let convSimp = null;
 
-
+// ensureConverter：一次建立三個（同步）
 const ensureConverter = async () => {
-  if (convTrad && convSimp) return;
+  if (convTradT && convTradTW && convTradHK && convSimp) return;
+
   const module = await import('https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm');
-  convTrad = module.Converter({ from: 'cn', to: localStorage.getItem(VARIANT_STORAGE_KEY) || 't' });
-  convSimp = module.Converter({ from: 't', to: 'cn' });
+
+  convTradT  = module.Converter({ from: 'cn', to: 't' });
+  convTradTW = module.Converter({ from: 'cn', to: 'tw' });
+  convTradHK = module.Converter({ from: 'cn', to: 'hk' });
+  convSimp   = module.Converter({ from: 't', to: 'cn' });
 };
 
 ensureConverter(); // 一開始就載入一次
 
+// convert：同步 + 根據 variant 選 converter
 const convert = (text, mode) => {
   const input = String(text ?? '');
-  if (mode === 'traditional') return convTrad?.(input) ?? input;
-  if (mode === 'simplified') return convSimp?.(input) ?? input;
+  if (mode === 'simplified') {
+    return convSimp ? convSimp(input) : input;
+  }
+  if (mode === 'traditional') {
+    const variant = localStorage.getItem(VARIANT_STORAGE_KEY) || DEFAULT_VARIANT;
+    let conv;
+    if (variant === 'tw') conv = convTradTW;
+    else if (variant === 'hk') conv = convTradHK;
+    else conv = convTradT;
+    return conv ? conv(input) : input;
+  }
   return input;
 };
 
@@ -161,16 +178,15 @@ eventOn(getButtonEvent(t.LAST_SIMP), () =>
   convertLastMessage(getLastMessageId(), 'simplified')
 );
 
-
-const convertInput = async (mode) => {
+// convertInput：去掉 async / await
+const convertInput = (mode) => {
   const input = $('#send_textarea');
   if (!input.length) return toastr.error('找不到輸入框', '', { timeOut: 1500 });
-  let val = String(input.val() ?? '').trim();
+  const val = String(input.val() ?? '');
   if (!val) return;
 
-  const converted = convert(val, mode);
   input
-    .val(converted)
+    .val(convert(val, mode))
     .trigger('input')
     .trigger('focus');
 
@@ -197,7 +213,7 @@ const clearInput = () => {
   if (!clearConfirm) {
     clearConfirm = true;
 flashDanger();
-    toastr.warning('再點一次「輸入清空」即可清除', '', {
+    toastr.warning('再點一次「清空」即可清除', '', {
       timeOut: 1500
     });
 
@@ -247,7 +263,6 @@ const convertLastMessage = async (msgId, mode) => {
   const msg = String(msgs[0].message ?? '');
   if (!msg) return;
 
-  // 因為頂層已 await ensureConverter()，這裡不用再等
   let newMsg = convert(msg, mode);
 
   // ── 處理多個自訂標籤 ──
@@ -372,7 +387,8 @@ if (!document.getElementById('opencc-mobile-style')) {
       }
 
       .th-custom-popup-ui label{
-        font-size:14px;
+      font-size:12px; /* 縮小字體 */
+      line-height:1.2; /* 調整行距 */
       }
   #custom-tag-input{
     font-size:14px;
@@ -385,8 +401,8 @@ if (!document.getElementById('opencc-mobile-style')) {
  <div style="
   display:flex;
   align-items:flex-start;
-  margin-bottom:16px;
-  gap:12px;
+  margin-bottom:14px; /* 間距 */
+  gap:10px; /* 間隔 */
 ">
         <input type="checkbox" id="${item.id}" ${item.state ? 'checked' : ''}
 style="
@@ -401,7 +417,8 @@ cursor:pointer;
   margin:0;
   cursor:pointer;
   color:#eee;
-  line-height:1.4;
+  line-height:1.2; /* 行距 */
+  font-size:18px; /* 字體 */
   flex:1;
 ">
           ${item.name}
@@ -410,22 +427,28 @@ cursor:pointer;
     `).join('');
 
 const variantSection = `
-  <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #444;">
+  <div style="margin-top: 24px;">
     <select id="trad-variant" style="width:100%; padding:10px; font-size:18px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
       <option value="t" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 't' || !localStorage.getItem(VARIANT_STORAGE_KEY) ? 'selected' : ''}>官版繁體 (t)</option>
       <option value="tw" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'tw' ? 'selected' : ''}>台版繁體 (tw)</option>
       <option value="hk" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'hk' ? 'selected' : ''}>港版繁體 (hk)</option>
     </select>
-    <div style="margin-top:8px; font-size:0.9em; color:#aaa;">
-      影響：輸入框、本樓、自動回覆、標籤內容的所有繁體轉換
+    <div class="tag-help" style="margin-top:6px; font-size:0.85em; color:#aaa; line-height:1.4;">
+      <div class="trad-text">
+        繁體版本影響：輸入框、本樓、自動回覆、標籤內容的所有繁體轉換
+      </div>
+      <div class="simp-text" style="display:none;">
+        繁体版本影响：输入框、本楼、自动回复、标签内容的所有繁体转换
+      </div>
     </div>
   </div>
 `;
 
+
     const customTagValue = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
 
 const tagSection = `
-  <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #444;">
+  <div style="margin-top: 24px;">
     <select id="tag-preset" style="width:100%; padding:8px; font-size:18px; margin-bottom:8px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
       <option value="[IMG]">例一[]：[tag][/tag]格式</option>
       <option value="<action>">例二&lt;&gt;：&lt;tag&gt;&lt;/tag&gt;格式</option>
@@ -486,7 +509,7 @@ overflow-y:auto;
   box-shadow:0 0 30px rgba(0,0,0,0.7);
   font-family:system-ui,sans-serif;
 ">
-        <h3 style="margin:0 0 20px; font-size:1.4em; text-align:center; color:#eee;">Setting</h3>
+        <h3 style="margin:0 0 20px; font-size:1.2em; text-align:center; color:#eee;">Setting</h3>
         ${checkboxes}
         ${tagSection}
 		${variantSection}
@@ -498,6 +521,7 @@ overflow-y:auto;
       </div>
     `);
     $('body').append(popup);
+
 // hover 切換繁簡說明（用 JS 控制，避免 CSS 衝突）
 const helpDiv = popup.find('.tag-help');
 if (helpDiv.length) {
@@ -527,6 +551,38 @@ helpDiv.on('click', function() {
   tradText.show();
   simpText.hide();
 }
+
+// hover 切換繁簡說明（用 JS 控制，避免 CSS 衝突）
+const variantHelpDiv = popup.find('.tag-help');
+if (variantHelpDiv.length) {
+  const tradText = variantHelpDiv.find('.trad-text');
+  const simpText = variantHelpDiv.find('.simp-text');
+
+  variantHelpDiv.on('mouseenter', function() {
+    tradText.hide();
+    simpText.show();
+  }).on('mouseleave', function() {
+    tradText.show();
+    simpText.hide();
+  });
+
+  // 手機：點擊切換
+  variantHelpDiv.on('click', function() {
+    if (simpText.is(':visible')) {
+      simpText.hide();
+      tradText.show();
+    } else {
+      tradText.hide();
+      simpText.show();
+    }
+  });
+
+  // 初始狀態顯示繁體
+  tradText.show();
+  simpText.hide();
+}
+
+
     // hover 效果
     popup.find('.th-custom-popup-close').on('mouseenter', function() { $(this).css('background', '#d32f2f'); })
                                        .on('mouseleave', function() { $(this).css('background', '#f44336'); });
@@ -578,7 +634,7 @@ const variantSelect = popup.find('#trad-variant');
 variantSelect.on('change', function() {
   const val = this.value;
   localStorage.setItem(VARIANT_STORAGE_KEY, val);
-  toastr.success(`已切換為 ${val === 't' ? '官版' : val === 'tw' ? '台版' : '港版'}繁體`, '', {timeOut: 1500});
+  toastr.success(`已切換為 ${val === 't' ? '官版' : val === 'tw' ? '台版' : '港版'}繁體`, '', {timeOut: 1100});
   // 不用清 conv 也不用 await ensureConverter()，因為已經預載了
 });
 
