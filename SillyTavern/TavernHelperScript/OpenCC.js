@@ -411,13 +411,10 @@ cursor:pointer;
 
 const variantSection = `
   <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #444;">
-    <label for="trad-variant" style="display:block; margin-bottom:8px; color:#eee; font-size:1em;">
-      繁體選擇
-    </label>
     <select id="trad-variant" style="width:100%; padding:10px; font-size:18px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
-      <option value="t" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 't' || !localStorage.getItem(VARIANT_STORAGE_KEY) ? 'selected' : ''}>官版 (t)</option>
-      <option value="tw" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'tw' ? 'selected' : ''}>台版 (tw)</option>
-      <option value="hk" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'hk' ? 'selected' : ''}>港版 (hk)</option>
+      <option value="t" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 't' || !localStorage.getItem(VARIANT_STORAGE_KEY) ? 'selected' : ''}>官版繁體 (t)</option>
+      <option value="tw" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'tw' ? 'selected' : ''}>台版繁體 (tw)</option>
+      <option value="hk" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'hk' ? 'selected' : ''}>港版繁體 (hk)</option>
     </select>
     <div style="margin-top:8px; font-size:0.9em; color:#aaa;">
       影響：輸入框、本樓、自動回覆、標籤內容的所有繁體轉換
