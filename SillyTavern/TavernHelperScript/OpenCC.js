@@ -23,17 +23,21 @@ let convTradT = null;   // 官版 t
 let convTradTW = null;  // 台版 tw
 let convTradHK = null;  // 港版 hk
 let convSimp = null;
+let convTradTWP = null; // 台版詞語轉繁
+let convTWPToSimp = null; // 台版詞語轉簡
 
 // ensureConverter：一次建立三個（同步）
 const ensureConverter = async () => {
-  if (convTradT && convTradTW && convTradHK && convSimp) return;
+  if (convTradT && convTradTW && convTradHK && convTradTWP && convSimp) return;
 
   const module = await import('https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm');
 
   convTradT  = module.Converter({ from: 'cn', to: 't' });
   convTradTW = module.Converter({ from: 'cn', to: 'tw' });
   convTradHK = module.Converter({ from: 'cn', to: 'hk' });
+  convTradTWP = module.Converter({ from: 'cn', to: 'twp' });
   convSimp   = module.Converter({ from: 't', to: 'cn' });
+  convTWPToSimp = module.Converter({ from: 'twp', to: 'cn' });
 };
 
 ensureConverter(); // 一開始就載入一次
@@ -41,15 +45,32 @@ ensureConverter(); // 一開始就載入一次
 // convert：同步 + 根據 variant 選 converter
 const convert = (text, mode) => {
   const input = String(text ?? '');
-  if (mode === 'simplified') {
-    return convSimp ? convSimp(input) : input;
+if (mode === 'simplified') {
+  const variant = localStorage.getItem(VARIANT_STORAGE_KEY) || 't';
+
+  // 👉 如果是 twp，要用詞語逆轉
+  if (variant === 'twp') {
+    return convTWPToSimp ? convTWPToSimp(input) : input;
   }
+  // 👉 其他照舊
+  return convSimp ? convSimp(input) : input;
+}
   if (mode === 'traditional') {
-    const variant = localStorage.getItem(VARIANT_STORAGE_KEY) || DEFAULT_VARIANT;
+    const variant = localStorage.getItem(VARIANT_STORAGE_KEY) || 't';
     let conv;
-    if (variant === 'tw') conv = convTradTW;
-    else if (variant === 'hk') conv = convTradHK;
-    else conv = convTradT;
+if (variant === 'twp') {
+  const simp = convSimp ? convSimp(input) : input;
+  return convTradTWP ? convTradTWP(simp) : input;
+}
+else if (variant === 'tw') {
+  conv = convTradTW;
+}
+else if (variant === 'hk') {
+  conv = convTradHK;
+}
+else {
+  conv = convTradT;
+}
     return conv ? conv(input) : input;
   }
   return input;
@@ -432,6 +453,7 @@ const variantSection = `
       <option value="t" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 't' || !localStorage.getItem(VARIANT_STORAGE_KEY) ? 'selected' : ''}>官版繁體 (t)</option>
       <option value="tw" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'tw' ? 'selected' : ''}>台版繁體 (tw)</option>
       <option value="hk" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'hk' ? 'selected' : ''}>港版繁體 (hk)</option>
+      <option value="twp" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'twp' ? 'selected' : ''}>台版繁體+詞語转换 (twp)</option>
     </select>
     <div class="tag-help" style="margin-top:6px; font-size:0.85em; color:#aaa; line-height:1.4;">
       <div class="trad-text">
@@ -634,8 +656,16 @@ const variantSelect = popup.find('#trad-variant');
 variantSelect.on('change', function() {
   const val = this.value;
   localStorage.setItem(VARIANT_STORAGE_KEY, val);
-  toastr.success(`已切換為 ${val === 't' ? '官版' : val === 'tw' ? '台版' : '港版'}繁體`, '', {timeOut: 1100});
-  // 不用清 conv 也不用 await ensureConverter()，因為已經預載了
+
+let labelt = '官版繁體';
+if (val === 'tw') labelt = '台版繁體';
+else if (val === 'hk') labelt = '港版繁體';
+else if (val === 'twp') labelt = '台版繁體+詞語轉換';
+
+toastr.success(`已切換為 ${labelt}`, '', { timeOut: 1100 });
+
+  console.log('variant:', val);
+  console.log('convTradTWP:', convTradTWP);
 });
 
 
