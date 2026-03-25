@@ -32,10 +32,13 @@ window.iconv = iconv
 繁簡轉換器.html：  
 本人製作於2026.3.12  
 
+GBK_BIG5_UI_20260314.html：  
+本人美化介面，更新於2026.3.14
+  
 GBK_BIG5_UI.html：  
-本人美化介面，更新於2026.3.14  
+新增繁体版本的选择，再次美化介面，更新于2026.3.26
 
 繁簡轉換器_介面美化_合併單檔.html：  
-把full.js和iconv-browser.js的內容全部塞進GBK_BIG5_UI.html檔案裡而已  
+把full.js和iconv-browser.js的內容全部塞進GBK_BIG5_UI_20260314.html檔案裡而已  
 跟"GBK_BIG5_UI.html"沒有任何不同的功能，唯一好處是單一檔案就能使用。  
 
