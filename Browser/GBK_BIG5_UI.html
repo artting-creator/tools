@@ -134,13 +134,13 @@ textarea.dragover {
 
 .section button,
 .section label {
-    flex: 1 1 auto;              /* 彈性成長，但不強制等寬 */
-    min-width: 140px;            /* 避免太窄 */
-    white-space: nowrap;         /* 按鈕文字不要換行 */
+    flex: 1 1 auto;              /* 1 1 auto 可放大缩小 */
+    min-width: 140px;
+/*     white-space: nowrap;         按鈕文字不要換行 */
 }
 
 button {
-    padding: 12px 20px;          /* 加大觸控區 */
+    padding: 12px 12px;
     font-size: 18px;
     border-radius: 8px;
     border: 1px solid #d0d7e2;
@@ -186,23 +186,21 @@ button.primary:hover {
 
 /* 按鈕佔比 */
 #toggleConvertBtn {
-	min-width: 55%;
-	max-width: 75%;
+    flex: 0 0 53%;   /* 固定 */
 }
 
+#convertWrapper {
+    flex: 1;         /* 吃剩下空間 */
+}
 
 /* 版本下拉選單 */
 #convertButton {
-	min-width: 150px;
-	max-width: 300px;
-
+    width: 100%;
 }
 
 /* 版本下拉選單內部 */
 #convertOption {
     /* 移除 background: white; 這一行 */
-	min-width: 100%;
-	max-width: 100%;
     padding: 6px 0;
     border-radius: 12px;
     border: 1px solid rgba(208, 215, 226, 0.8);
@@ -272,7 +270,7 @@ margin-right:5px;
     color: #fff;
     padding: 12px 24px;
     border-radius: 8px;
-    font-size: 15px;
+    font-size: 16px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     opacity: 0;
     transform: translateY(20px);
@@ -361,46 +359,33 @@ letter-spacing:0.3px;
 }
 
 
-body.dark .customize-panel {
-background: rgba(35, 39, 47, 0.8);        /* 深色半透明 */
+body.dark .customize-panel,
+body.dark #langSelect,
+body.dark #convertOption {
+background: rgba(35, 39, 47, 0.75);        /* 深色半透明 */
+    backdrop-filter: blur(1px);
+    color: #eee;
     border-color: #555;
     box-shadow: 0 8px 25px rgba(0,0,0,0.4);
 }
+
 
 body.dark .customize-panel h3,
 body.dark .checkbox-list label {
     color: #e6e8eb;
 }
 
-body.dark .checkbox-list label:hover {
+body.dark .checkbox-list label:hover,
+body.dark #langSelect:hover,
+body.dark #convertOption:hover {
 background: rgba(123, 163, 255, 0.18);
+    border-color: #7ba3ff;
 }
 
 body.dark .panel-footer {
     border-top-color: rgba(85, 85, 85, 0.8);
 }
 
-/* 深色模式下拉選單 hover（統一風格） */
-body.dark #langSelect,
-body.dark #convertOption {
-    background: #2c313a;
-    color: #eee;
-    border-color: #555;
-}
-
-body.dark #langSelect:hover,
-body.dark #convertOption:hover {
-    background: rgba(123, 163, 255, 0.15);    /* 深色較明顯藍色 */
-    border-color: #7ba3ff;
-}
-
-
-
-body.dark #langSelect:focus,
-body.dark #convertOption:focus {
-    border-color: #7ba3ff;
-    box-shadow: 0 0 0 3px rgba(123, 163, 255, 0.25);
-}
 
 
 
@@ -438,20 +423,6 @@ body.dark #convertOption:focus {
 }
 
 
-/* 按鈕佔比 */
-#toggleConvertBtn {
-	min-width: 50%;
-	max-width: 50%;
-}
-
-
-/* 版本下拉選單 */
-#convertButton {
-	min-width: 150px;
-	max-width: 180px;
-
-}
-
     textarea {
         height: 30vh;
         min-height: 160px;
@@ -487,7 +458,6 @@ body.dark #convertOption:focus {
         width: 100%;
         margin: 8px 0 0 0; /* 上 右 下 左 */
         align-items: flex-start;
-		cursor: pointer;
     }
 
 /* 整組 */
@@ -504,7 +474,7 @@ body.dark #convertOption:focus {
     gap: 8px;
     cursor: pointer;
     flex: 1;
-    font-size: 16px;
+    font-size: 17px;
     color: #555;
 }
 
@@ -601,7 +571,7 @@ body.dark .checkbox-item {
 
     .button-row > *,
     .button-row.triple > * {
-        flex: 0 1 auto;             /* 不強制等寬，恢復自然大小 */
+        flex: 0 1 auto;             /* 不強制等寬 */
     }
 
     button {
@@ -617,15 +587,16 @@ body.dark .checkbox-item {
     display: block;
 }
 
-
 .select-button:hover {
     background: rgba(91, 140, 255, 0.08);
     border-color: #5b8cff;
 }
 
 .select-button .arrow {
+    display: inline-block;   /* 必加 */
     margin-left: 8px;
     font-size: 15px;
+    transition: transform 0.1s ease;
 }
 
 .custom-select.open .select-button .arrow {
@@ -689,7 +660,7 @@ body.dark .select-button {
 
 body.dark .select-options,
 body.dark #customizePanel {
-    background: rgba(35, 39, 47, 0.94);
+    background: rgba(35, 39, 47, 0.8);
     border-color: rgba(85, 85, 85, 0.75);
 }
 
@@ -801,7 +772,8 @@ body.dark .checkbox-list label:hover {
 <!-- 語言選擇（自訂下拉） -->
 <div class="custom-select" id="langSelectWrapper">
     <button class="select-button" id="langButton">
-        <span id="langText">介面▼</span>
+        <span id="langText">UI介面</span>
+	    <span class="arrow">▼</span>
     </button>
     <div class="select-options" id="langOptions">
         <div class="option" data-value="zh-TW" data-i18n-option="UIzhTW">繁體介面</div>
@@ -831,7 +803,6 @@ body.dark .checkbox-list label:hover {
 <div class="custom-select" id="convertWrapper">
     <button class="select-button" id="convertButton">
         <span id="convertText">官版 (t)</span>
-        <span class="arrow">▼</span>
     </button>
     <div class="select-options" id="convertOption">
         <div class="option" data-value="t" data-i18n-option="t">官版 (t)</div>
@@ -1688,7 +1659,7 @@ s2t:"CN/TW → Traditional",
 
 t: "Traditional characters (t)",
 tw: "Taiwan characters (tw)",
-hk: "Hong Kong characters (hk)",
+hk: "HongKong characters (hk)",
 twp: "Taiwan idiom conversion (twp)",
 
 paste:"Paste",
