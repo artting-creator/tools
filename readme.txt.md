@@ -1,5 +1,5 @@
-# 繁簡轉換器使用方法：  
-把以下三個檔案下載到同一個目錄，用瀏覽器打開"GBK_BIG5_UI.html"即可  
+# 繁簡轉換器(網頁版)使用方法：  
+把Browser目錄下的三個檔案下載到自己電腦裡，用瀏覽器打開"GBK_BIG5_UI.html"即可  
 - full.js  
 - iconv-browser.js  
 - GBK_BIG5_UI.html  
@@ -47,3 +47,6 @@ GBK_BIG5_UI.html：
 neocities.org 是免費網站，目前是穩定的，但不保證存活時間  
 https://artting.neocities.org//tools//GBK_BIG5_UI  
 
+## SillyTavern 目錄是給酒館用的  
+OpenCC.js：腳本線上連結的檔案。  
+OpenCCv2.1.4.json：酒館助手用的腳本
