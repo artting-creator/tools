@@ -28,18 +28,20 @@ box-sizing:border-box;
 }
 
 body {
-    font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif;
+/*    font-family: "Segoe UI", "Microsoft JhengHei", Arial, sans-serif; */
     margin: 0;
     background: linear-gradient(135deg, #eef2f7, #f8fbff);
     color: #333;
-    min-height: 100vh;           /* 確保 body 至少滿屏 */
+    min-height: 100vh;           /* body 滿屏 */
     display: flex;
     flex-direction: column;
 }
 
+/*
 html {
-    font-size: 16px;
+    font-size: 1.8rem;
 }
+*/
 
 /* ===== 容器 ===== */
 .container {
@@ -65,15 +67,14 @@ html {
     margin-bottom: 2px;
 }
 
-h1 {
-    margin: 2px;
-    font-size: 26px;
-    font-weight: 600;
-    color: #2d3a4b;
-}
 
-h3 {
+.title {
     margin: 2px;
+    font-size: 2.8rem;
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0;
+    color: #2d3a4b;
 }
 
 .top-controls {
@@ -82,13 +83,31 @@ h3 {
     align-items: center;
 }
 
-/* 按鈕靠右（用 margin-left: auto） */
+/* 按鈕靠右 */
+.button-right
+{
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+}
+
+
+#fontbutton button {
+    width: 40px;        /* 固定寬度 */
+    height: 40px;       /* 固定高度 */
+    font-size: 1.8rem;
+    display: inline-flex;
+	white-space: nowrap;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
 
 #langSelect {
     padding: 12px 12px;           /* 加大內距，讓高度接近按鈕 */
     border-radius: 8px;
     border: 1px solid #ccc;
-    font-size: 18px;              /* 跟按鈕文字一樣大 */
+    font-size: 1.8rem;              /* 跟按鈕文字一樣大 */
     background: white;
     height: 48px;                 /* 強制和按鈕一樣高 */
     box-sizing: border-box;
@@ -101,7 +120,7 @@ textarea {
     min-height: 180px;           /* 最小高度保證可讀 */
     height: 35vh;                /* 手機佔螢幕 35% 左右 */
     max-height: 50vh;            /* 不要過高蓋住按鈕 */
-    font-size: 20px;           /* ≥16px 避免 iOS 自動 zoom */
+    font-size: 2rem;           /* ≥16px 避免 iOS 自動 zoom */
     padding: 14px;
     border-radius: 10px;
     border: 1px solid #d7dce6;
@@ -141,7 +160,7 @@ textarea.dragover {
 
 button {
     padding: 12px 12px;
-    font-size: 18px;
+    font-size: 1.8rem;
     border-radius: 8px;
     border: 1px solid #d0d7e2;
     background: #f7f9fc;
@@ -239,7 +258,7 @@ body.dark #output.hover-highlight {
 
 /* checkbox 標籤 */
 label {
-    font-size: 18px;
+    font-size: 1.8rem;
     color: #555;
     display: flex;
     align-items: center;
@@ -270,7 +289,7 @@ margin-right:5px;
     color: #fff;
     padding: 12px 24px;
     border-radius: 8px;
-    font-size: 16px;
+    font-size: 1.6rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     opacity: 0;
     transform: translateY(20px);
@@ -353,7 +372,7 @@ background:#5b80c9;
 border-color:#5b80c9;
 }
 
-body.dark h1{
+body.dark .title{
 color:#e9edf3;
 letter-spacing:0.3px;
 }
@@ -370,7 +389,6 @@ background: rgba(35, 39, 47, 0.75);        /* 深色半透明 */
 }
 
 
-body.dark .customize-panel h3,
 body.dark .checkbox-list label {
     color: #e6e8eb;
 }
@@ -398,25 +416,32 @@ body.dark .panel-footer {
     }
 
 
-    /* 頂部 */
-    .topbar {
-        flex-direction: column;
-	    justify-content: center;
-        align-items: flex-start;
-    }
-
     .top-controls {
         width: 100%;
         display: flex;
+        flex: 0 0 100%;   /* 強制換到下一行 */
         flex-direction: row;
-        align-items: flex-start;    /* 靠上方 */
         justify-content: space-between;   /* 填滿 */
         gap: 6px;
+		        min-width: 0;
+    }
+	/* === 強制三個控制項填滿可用空間 === 但無效 */
+    .top-controls > * {
+        flex: 1 1 auto;
+        min-width: 0;                /* 允許 flex 項目被壓縮到比內容還小 */
+    }
+	
+/* 如果想讓「自訂」和「語言」下拉稍微寬一點，背景按鈕固定一點，可以再微調 */
+    #customizeWrapper,
+    #langSelectWrapper {
+        flex: 1.2 1 auto;           /* 給下拉多一點空間 */
     }
 
-    h1 {
-        font-size: 24px;
+    #themeToggle {
+        flex: 0.8 1 auto;           /* 背景按鈕稍微小一點 */
+        white-space: nowrap;
     }
+
 
 .convert-row {
     width: 100%;
@@ -426,7 +451,7 @@ body.dark .panel-footer {
     textarea {
         height: 30vh;
         min-height: 160px;
-        font-size: 18px;
+        font-size: 1.8rem;
         line-height: 1.5;
     }
 
@@ -474,7 +499,7 @@ body.dark .panel-footer {
     gap: 8px;
     cursor: pointer;
     flex: 1;
-    font-size: 17px;
+    font-size: 1.7rem;
     color: #555;
 }
 
@@ -518,7 +543,7 @@ body.dark .checkbox-item {
         flex: 1 1 30%;              /* 盡量三等分 */
         min-width: 90px;            /* 避免過窄 */
         white-space: nowrap;
-        font-size: 18px;
+        font-size: 1.8rem;
         padding: 12px 10px;
         text-align: center;         /* 文字置中，看起來更平均 */
     }
@@ -526,7 +551,7 @@ body.dark .checkbox-item {
     /* 所有按鈕基本樣式（手機） */
     button {
         padding: 6px 10px;
-        font-size: 17px;
+        font-size: 1.7rem;
         min-height: 48px;
         border-radius: 8px;
     }
@@ -576,7 +601,7 @@ body.dark .checkbox-item {
 
     button {
         padding: 10px 18px;
-        font-size: 18px;
+        font-size: 1.8rem;
     }
 }
 
@@ -595,7 +620,7 @@ body.dark .checkbox-item {
 .select-button .arrow {
     display: inline-block;   /* 必加 */
     margin-left: 8px;
-    font-size: 15px;
+    font-size: 1.5rem;
     transition: transform 0.1s ease;
 }
 
@@ -626,13 +651,15 @@ body.dark .checkbox-item {
 
 /* 自訂顯示面板特殊處理（比一般下拉寬） */
 #customizePanel {
+    font-size: 1.8rem;
+    font-weight: bold;
     min-width: 220px;
     width: auto;
     padding: 6px 10px;  /* 上下 6px，左右 10px */
 }
 
 .option {
-    font-size: 18px;
+    font-size: 1.8rem;
     padding: 6px 10px;
     cursor: pointer;
     border-radius: 6px;
@@ -689,7 +716,14 @@ body.dark .checkbox-list label:hover {
 
 <div class="container wide">
 <div class="topbar">
-<h1 data-i18n="title">繁簡轉換工具</h1>
+
+<div class="title" data-i18n="title">繁簡轉換工具</div>
+<!-- 字型大小 -->
+<div class="button-right" id="fontbutton">
+  <button class="select-button"  id="font-minus">&minus;</button>  
+  <button class="select-button"  id="font-reset" data-i18n="fontsize">字体</button>  
+  <button class="select-button"  id="font-plus">&plus;</button>
+</div>
 
 <div class="top-controls">
 
@@ -699,8 +733,14 @@ body.dark .checkbox-list label:hover {
             ⚙️ 自訂
         </button>
         <div id="customizePanel" class="select-options customize-panel">
-            <h3 data-i18n="displaySettings">按鈕顯示設定</h3><div class="checkbox-list">
+              <span data-i18n="displaySettings">按鈕顯示設定</span>
                 <!-- 每個按鈕獨立設定 -->
+			<div class="checkbox-list">
+                <label>
+                    <input type="checkbox" id="showFontbutton" checked>
+                    <span data-i18n="showFontbutton">字體大小</span>
+                </label>
+
                 <label>
                     <input type="checkbox" id="showToggleConvertBtn" checked>
                     <span data-i18n="showToggleConvertBtn">繁簡轉換</span>
@@ -746,7 +786,7 @@ body.dark .checkbox-list label:hover {
                 </label>
                 
                 <label>
-                    <input type="checkbox" id="showClearInputBtn" checked>
+                    <input type="checkbox" id="showClearInputBtn">
                     <span data-i18n="showClearInputBtn">清空輸入</span>
                 </label>
                 
@@ -785,6 +825,8 @@ body.dark .checkbox-list label:hover {
 <button id="themeToggle" data-i18n="theme">背景</button>
 </div>
 </div>
+
+
 <textarea id="input" placeholder="貼上文字..." data-i18n-placeholder="input"></textarea>
 
 <div class="section">
@@ -841,7 +883,7 @@ body.dark .checkbox-list label:hover {
 <div class="checkbox-row">
     <div class="checkbox-group">
         <label class="checkbox-item">
-            <input type="checkbox" id="pasteAppend" checked>
+            <input type="checkbox" id="pasteAppend">
             <span data-i18n="append">附加貼上</span>
         </label>
     </div>
@@ -922,6 +964,7 @@ const puaFixMap = {
 	"\uE5D1": "龜",
     "\uE7C9": "臺",
 	"\uE7CA": "台",
+	"\uF761": "谴",
     "\uF849": "蔣",
     "\uF8A1": "，",
     "\uF8A2": "。",
@@ -1467,6 +1510,8 @@ const i18n = {
 "zh-TW":{
 
 title:"繁簡轉換工具",
+fontsize:"字體",
+showFontbutton:"字體大小",
 
 UIzhTW:"繁體介面",
 UIzhCN:"簡體介面",
@@ -1512,8 +1557,8 @@ swapok:"資料已互換",
 clearok:"已清空",
 fixok:"已嘗試修復",
 
-fixGbk:"修復GBK亂碼→簡體",
-fixBig5:"修復BIG5亂碼→繁體",
+fixGbk:"修復GBK亂碼",
+fixBig5:"修復BIG5亂碼",
 
 customFix:"套用自定義修復表",
 
@@ -1546,6 +1591,8 @@ clipboardPaste:"已貼上 ✓"
 "zh-CN":{
 
 title:"繁简转换工具",
+fontsize:"字体",
+showFontbutton:"字体大小",
 
 UIzhTW:"繁体介面",
 UIzhCN:"简体介面",
@@ -1591,8 +1638,8 @@ swapok:"数据已互换",
 clearok:"已清空",
 fixok:"已尝试修复",
 
-fixGbk:"修复GBK乱码→简体",
-fixBig5:"修复BIG5乱码→繁体",
+fixGbk:"修复GBK乱码",
+fixBig5:"修复BIG5乱码",
 
 customFix:"使用自定义修复表",
 
@@ -1625,6 +1672,8 @@ clipboardPaste:"已贴上 ✓"
 en:{
 
 title:"Chinese Converter",
+fontsize:"Font",
+showFontbutton:"Font Size",
 
 UIzhTW:"Traditional UI",
 UIzhCN:"Simplified UI",
@@ -1943,6 +1992,8 @@ const displayElements = {
 
 	langSelectWrapper: document.getElementById('langSelectWrapper'),
     convertWrapper: document.getElementById('convertWrapper'),
+    fontbutton: document.getElementById('fontbutton'),
+
 };
 
 const displayCheckboxes = {
@@ -1959,6 +2010,7 @@ const displayCheckboxes = {
 
 	showLangSelectWrapper: document.getElementById('showLangSelectWrapper'),
     showConvertWrapper: document.getElementById('showConvertWrapper'),
+    showFontbutton: document.getElementById('showFontbutton'),
 
 };
 
@@ -2042,6 +2094,61 @@ document.addEventListener('click', () => {
     loadDisplaySettings();
 }
 
+
+
+/* 缩放字体功能，将 FontSize 设为 62.5% ， 1rem=10px为原版大小 */
+document.addEventListener('DOMContentLoaded', function() {
+  let currentScale = 62.5;   // 預設值
+  const html = document.documentElement;
+  const STORAGE_KEY = 'customFontScale';   // 用來儲存的 key
+
+  // 從 localStorage 讀取上次設定的值
+  function loadSavedScale() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      currentScale = parseInt(saved);
+    }
+  }
+
+  // 更新字型並儲存
+  function updateFontSize(save = true) {
+    html.style.fontSize = currentScale + '%';
+    
+    if (save) {
+      localStorage.setItem(STORAGE_KEY, currentScale);
+    }
+  }
+
+  // 綁定按鈕
+  const btnMinus = document.getElementById('font-minus');
+  const btnPlus  = document.getElementById('font-plus');
+  const btnReset = document.getElementById('font-reset');
+
+  if (btnMinus) {
+    btnMinus.addEventListener('click', () => {
+      currentScale = Math.max(37.5, currentScale - 5);
+      updateFontSize();
+    });
+  }
+
+  if (btnPlus) {
+    btnPlus.addEventListener('click', () => {
+      currentScale = Math.min(112.5, currentScale + 5);
+      updateFontSize();
+    });
+  }
+
+  if (btnReset) {
+    btnReset.addEventListener('click', () => {
+      currentScale = 62.5;
+      updateFontSize();
+    });
+  }
+
+  // 載入並套用上次儲存的值
+  loadSavedScale();
+  updateFontSize(false);   // 第一次載入不重複儲存
+});
 
 </script>
 <!--
