@@ -1,0 +1,30 @@
+{
+  "type": "script",
+  "enabled": true,
+  "name": "繁簡轉換器-OpenCC",
+  "id": "c4790e7d-e95a-4870-a482-c0970553745a",
+  "content": "fetch('https://cdn.jsdelivr.net/gh/artting-creator/tools@v2.1.4/SillyTavern/TavernHelperScript/OpenCC.js')\n.then(r => r.text())\n.then(code => new Function(code)())\n.catch(console.error);\n\n/*\n繁簡轉換器-OpenCC腳本作者：安提\n基本能用之後，慢慢新增其他功能。\nhttps://github.com/artting-creator/tools/tree/main/SillyTavern/TavernHelperScript\nv1.0 基本功能\nv1.2.3 新增標籤功能\nv1.3.2 手機螢幕適配\nv2.1.4 繁體可選擇官/台/港版\n\n酒館助手作者：KAKAA, 青空莉想做舞台少女的狗\nhttps://github.com/N0VI028/JS-Slash-Runner\n這腳本得安裝過酒館助手後，從酒館助手導入腳本才能使用。\n\n原繁簡轉換腳本作者：aabb987\nhttps://github.com/aabb987/silyTarven-translate-test-project/tree/main\n最初是用這腳本的框架，改用OpenCC，讓繁體不再錯字。\n*/",
+  "info": "繁簡轉換器-OpenCC腳本作者：安提\n基本能用之後，慢慢新增其他功能。\nhttps://github.com/artting-creator/tools/tree/main/SillyTavern/TavernHelperScript\nv1.0 基本功能\nv1.2.3 新增標籤功能\nv1.3.2 手機螢幕適配\nv2.1.3 繁體可選擇官/台/港版\n\n酒館助手作者：KAKAA, 青空莉想做舞台少女的狗\nhttps://github.com/N0VI028/JS-Slash-Runner\n這腳本得安裝過酒館助手後，從酒館助手導入腳本才能使用。\n\n原繁簡轉換腳本作者：aabb987\nhttps://github.com/aabb987/silyTarven-translate-test-project/tree/main\n最初是用這腳本的框架，改用OpenCC，讓繁體不再錯字。",
+  "button": {
+    "enabled": true,
+    "buttons": [
+      {
+        "name": "輸入轉繁⇄简",
+        "visible": true
+      },
+      {
+        "name": "清空",
+        "visible": true
+      },
+      {
+        "name": "本樓轉繁",
+        "visible": true
+      },
+      {
+        "name": "本楼转简",
+        "visible": true
+      }
+    ]
+  },
+  "data": {}
+}
