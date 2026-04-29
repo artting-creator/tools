@@ -49,4 +49,4 @@ https://artting.neocities.org//tools//GBK_BIG5_UI
 
 ## SillyTavern 目錄是給酒館用的  
 OpenCC.js：腳本線上連結的檔案。  
-OpenCCv2.1.4.json：酒館助手用的腳本
+OpenCCv2.2.json：酒館助手用的腳本

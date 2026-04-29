@@ -4,6 +4,7 @@
 $('.opencc-btn').remove();
   const STORAGE_KEY = 'opencc_auto_mode';
   const TAG_STORAGE_KEY = 'opencc_custom_tag';
+  const TAG_LIST_STORAGE_KEY = 'opencc_custom_tag_list';
   const t = {
     INPUT_TRAD: '輸入轉繁⇄简',
     INPUT_CLEAR: '清空',
@@ -138,6 +139,67 @@ const parseSingleTag = (input) => {
   }
 
   return { enabled: false };
+};
+
+const loadSavedTagList = () => {
+  try {
+    const raw = localStorage.getItem(TAG_LIST_STORAGE_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return [];
+    return list
+      .map((item) => {
+        if (typeof item === 'string') {
+          const tag = item.trim();
+          return tag ? { tag, note: '' } : null;
+        }
+        if (item && typeof item === 'object') {
+          const tag = String(item.tag ?? '').trim();
+          if (!tag) return null;
+          return { tag, note: String(item.note ?? '').trim() };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+};
+
+const saveTagList = (list) => {
+  localStorage.setItem(TAG_LIST_STORAGE_KEY, JSON.stringify(list));
+};
+
+const saveTagToList = (tagValue) => {
+  const tag = String(tagValue ?? '').trim();
+  if (!tag) return null;
+  const list = loadSavedTagList();
+  if (list.some(item => item.tag === tag)) {
+    return { status: 'exists', tag };
+  }
+  const next = [{ tag, note: '' }, ...list].slice(0, 30);
+  saveTagList(next);
+  return { status: 'saved', tag };
+};
+
+const appendUniqueTag = (currentRaw, tagRaw) => {
+  const current = String(currentRaw ?? '').trim();
+  const currentParts = current ? current.split(',').map(x => x.trim()).filter(Boolean) : [];
+  const incomingParts = String(tagRaw ?? '').split(',').map(x => x.trim()).filter(Boolean);
+  if (!incomingParts.length) return { changed: false, value: current };
+
+  const seen = new Set(currentParts);
+  let changed = false;
+
+  incomingParts.forEach((tag) => {
+    if (!seen.has(tag)) {
+      currentParts.push(tag);
+      seen.add(tag);
+      changed = true;
+    }
+  });
+
+  return { changed, value: currentParts.join(',') };
 };
 
   /* 通用 tag 轉換函式（支援自訂前後綴） */
@@ -404,7 +466,7 @@ if (!document.getElementById('opencc-mobile-style')) {
       }
 
       .th-custom-popup-ui h3{
-        font-size:1.25em;
+        font-size:20px;
       }
 
       .th-custom-popup-ui label{
@@ -455,7 +517,7 @@ const variantSection = `
       <option value="hk" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'hk' ? 'selected' : ''}>港版繁體 (hk)</option>
       <option value="twp" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'twp' ? 'selected' : ''}>台版繁體+詞語转换 (twp)</option>
     </select>
-    <div class="tag-help" style="margin-top:6px; font-size:0.85em; color:#aaa; line-height:1.4;">
+    <div class="tag-help" style="margin-top:6px; font-size:16px; color:#aaa; line-height:1.4;">
       <div class="trad-text">
         繁體版本影響：輸入框、本樓、自動回覆、標籤內容的所有繁體轉換
       </div>
@@ -470,17 +532,18 @@ const variantSection = `
     const customTagValue = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
 
 const tagSection = `
-  <div style="margin-top: 24px;">
-    <select id="tag-preset" style="width:100%; padding:8px; font-size:18px; margin-bottom:8px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
-      <option value="[IMG]">例一[]：[tag][/tag]格式</option>
-      <option value="<action>">例二&lt;&gt;：&lt;tag&gt;&lt;/tag&gt;格式</option>
-      <option value="think target=|</thought>">例三|：tag1|tag2格式</option>
-     <option value="[IMG_GEN],< |」">例四多组：例1,例3</option>
+  <div style="margin-top: 24px;">    <select id="tag-preset" style="width:100%; padding:8px; font-size:18px; margin-bottom:8px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
+      <option value="" selected disabled>標籤設定範例</option>
+      <option value="[IMG]">例一：[tag][/tag]成對中括號</option>
+      <option value="<action>">例二：&lt;tag&gt;&lt;/tag&gt;成對尖括號</option>
+      <option value="<IMG prompt=|>">例三：豎線前tag1|豎線後tag2</option>
+      <option value="[IMG_GEN],< |」">例四：多組之間用逗號</option>
     </select>
-    <input type="text" id="custom-tag-input" value="${customTagValue}"
-           placeholder="[tag] 或 <tag> 或 prefix|suffix"
+    <div style="display:flex; gap:8px; align-items:center;">
+      <input type="text" id="custom-tag-input" value="${customTagValue}"
+             placeholder="[tag] 或 <tag> 或 prefix|suffix"
 style="
-  width:100%;
+  flex:1;
   padding:10px;
   font-size:18px;
   background:#1e1e1e;
@@ -489,18 +552,25 @@ style="
   border-radius:6px;
   font-family:monospace;
 ">
-<div class="tag-help" style="margin-top:6px; font-size:0.85em; color:#aaa; line-height:1.4;">
+      <button type="button" id="save-custom-tag-btn" class="menu_button" style="white-space:nowrap; min-width:72px;">保存</button>
+      <button type="button" id="clear-custom-tag-btn" class="menu_button" style="white-space:nowrap; min-width:72px;">清除</button>
+    </div>
+    <details id="saved-tag-list-wrap" style="margin-top:8px; border:1px solid #555; border-radius:6px; padding:8px; background:#1f1f20;">
+      <summary style="cursor:pointer; color:#ddd; font-size:18px;">自訂標籤列表</summary>
+      <div id="saved-tag-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
+    </details>
+<div class="tag-help" style="margin-top:6px; font-size:16px; color:#aaa; line-height:1.4;">
   <div class="trad-text">
-    標籤支援格式如下，可參考範例<br>
-    • 成對標籤[]<br>
-    • 成對標籤<><br>
-    • 自定義標籤1|自定義標籤2<br>
+    • 標籤設定可參考範例<br>
+    • 勾選標籤內容轉為繁/簡體，標籤才有效<br>
+    • 應用場景：例如生圖時產生的路徑不可轉繁簡，或正則只抓取繁/簡體角色名<br>
+    • 標籤可保存並自訂備註
   </div>
   <div class="simp-text" style="display:none;">
-    标签支援格式如下，可参考范例<br>
-    • 成对标签[]<br>
-    • 成对标签<><br>
-    • 自定义标签1|自定义标签2<br>
+    • 标签设定可参考范例<br>
+    • 勾选标签内容转为繁/简体，标签才有效<br>
+    • 应用场景：例如生图时产生的路径不可转繁简，或正则只抓取繁/简体角色名<br>
+    • 标签可保存并自订备注
   </div>
 </div>
   </div>
@@ -531,13 +601,13 @@ overflow-y:auto;
   box-shadow:0 0 30px rgba(0,0,0,0.7);
   font-family:system-ui,sans-serif;
 ">
-        <h3 style="margin:0 0 20px; font-size:1.2em; text-align:center; color:#eee;">Setting</h3>
+        <h3 style="margin:0 0 20px; font-size:26px; text-align:center; color:#eee;">Setting</h3>
         ${checkboxes}
         ${tagSection}
 		${variantSection}
         <button type="button" class="menu_button th-custom-popup-close" style="
           margin-top:24px; width:100%; padding:12px; background:#f44336; color:white;
-          border:none; border-radius:6px; cursor:pointer; font-size:1.1em; transition: background 0.2s;">
+          border:none; border-radius:6px; cursor:pointer; font-size:21px; transition: background 0.2s;">
           Close
         </button>
       </div>
@@ -545,51 +615,13 @@ overflow-y:auto;
     $('body').append(popup);
 
 // hover 切換繁簡說明（用 JS 控制，避免 CSS 衝突）
-const helpDiv = popup.find('.tag-help');
-if (helpDiv.length) {
-  const tradText = helpDiv.find('.trad-text');
-  const simpText = helpDiv.find('.simp-text');
+const bindHelpToggle = (container) => {
+  if (!container || !container.length) return;
+  const tradText = container.find('.trad-text');
+  const simpText = container.find('.simp-text');
+  if (!tradText.length || !simpText.length) return;
 
-helpDiv.on('mouseenter', function() {
-  tradText.hide();
-  simpText.show();
-}).on('mouseleave', function() {
-  tradText.show();
-  simpText.hide();
-});
-
-// 手機：點擊切換
-helpDiv.on('click', function() {
-  if (simpText.is(':visible')) {
-    simpText.hide();
-    tradText.show();
-  } else {
-    tradText.hide();
-    simpText.show();
-  }
-});
-
-  // 初始狀態顯示繁體
-  tradText.show();
-  simpText.hide();
-}
-
-// hover 切換繁簡說明（用 JS 控制，避免 CSS 衝突）
-const variantHelpDiv = popup.find('.tag-help');
-if (variantHelpDiv.length) {
-  const tradText = variantHelpDiv.find('.trad-text');
-  const simpText = variantHelpDiv.find('.simp-text');
-
-  variantHelpDiv.on('mouseenter', function() {
-    tradText.hide();
-    simpText.show();
-  }).on('mouseleave', function() {
-    tradText.show();
-    simpText.hide();
-  });
-
-  // 手機：點擊切換
-  variantHelpDiv.on('click', function() {
+  container.off('click.helpToggle').on('click.helpToggle', function() {
     if (simpText.is(':visible')) {
       simpText.hide();
       tradText.show();
@@ -599,13 +631,14 @@ if (variantHelpDiv.length) {
     }
   });
 
-  // 初始狀態顯示繁體
   tradText.show();
   simpText.hide();
-}
+};
 
-
-    // hover 效果
+const helpBlocks = popup.find('.tag-help');
+bindHelpToggle(helpBlocks.eq(0));
+bindHelpToggle(helpBlocks.eq(1));
+// hover 效果
     popup.find('.th-custom-popup-close').on('mouseenter', function() { $(this).css('background', '#d32f2f'); })
                                        .on('mouseleave', function() { $(this).css('background', '#f44336'); });
 
@@ -640,16 +673,99 @@ if (variantHelpDiv.length) {
     const presetSelect = popup.find('#tag-preset');
     const tagInput = popup.find('#custom-tag-input');
 const variantSelect = popup.find('#trad-variant');
+    const saveTagBtn = popup.find('#save-custom-tag-btn');
+    const clearTagBtn = popup.find('#clear-custom-tag-btn');
+    const savedTagWrap = popup.find('#saved-tag-list-wrap');
+    const savedTagList = popup.find('#saved-tag-list');
+
+    const renderSavedTagList = () => {
+      const list = loadSavedTagList();
+      savedTagList.empty();
+
+      if (!list.length) {
+        savedTagList.append('<span style="font-size:15px; color:#888;">尚未保存任何標籤</span>');
+        return;
+      }
+
+      list.forEach((item, index) => {
+        const row = $(`
+          <div style="display:grid; grid-template-columns:38px 1fr 1fr 56px; gap:6px; align-items:center;">
+            <div style="font-size:15px; color:#aaa; text-align:center;">${index + 1}</div>
+            <input type="text" class="saved-tag-note" data-tag-index="${index}" value="${String(item.note ?? '').replace(/"/g, '&quot;')}" placeholder="備註" style="min-width:0; padding:6px; font-size:15px; background:#262626; color:#eee; border:1px solid #555; border-radius:4px;">
+            <button type="button" class="menu_button saved-tag-item" data-tag-index="${index}" style="margin:0; padding:6px 8px; font-size:15px; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${String(item.tag).replace(/"/g, '&quot;')}">${item.tag}</button>
+            <button type="button" class="menu_button saved-tag-delete" data-tag-index="${index}" style="margin:0; width:56px; height:34px; padding:0; font-size:15px; line-height:1;">刪除</button>
+          </div>
+        `);
+
+        row.find('.saved-tag-item').on('click', () => {
+          const { changed, value } = appendUniqueTag(tagInput.val(), item.tag);
+          tagInput.val(value);
+          localStorage.setItem(TAG_STORAGE_KEY, value);
+          tagInput.trigger('focus');
+          if (changed) toastr.success('已附加保存標籤', '', { timeOut: 1000 });
+          else toastr.info('標籤已存在，不重複附加', '', { timeOut: 1000 });
+        });
+
+        row.find('.saved-tag-note').on('change', function() {
+          const i = Number($(this).data('tag-index'));
+          const nextList = loadSavedTagList();
+          if (!nextList[i]) return;
+          nextList[i].note = String(this.value ?? '').trim();
+          saveTagList(nextList);
+        });
+
+        row.find('.saved-tag-delete').on('click', function() {
+          const i = Number($(this).data('tag-index'));
+          const nextList = loadSavedTagList().filter((_, idx) => idx !== i);
+          saveTagList(nextList);
+          renderSavedTagList();
+          toastr.success('已刪除保存標籤', '', { timeOut: 900 });
+        });
+
+        savedTagList.append(row);
+      });
+    };
+    renderSavedTagList();
 
     presetSelect.on('change', function() {
       const val = this.value;
-      tagInput.val(val);
+      if (!val) return;
+      const { changed, value } = appendUniqueTag(tagInput.val(), val);
+      tagInput.val(value);
       tagInput.trigger('focus');   // 新增
-      localStorage.setItem(TAG_STORAGE_KEY, val);
+      localStorage.setItem(TAG_STORAGE_KEY, value);
+      if (!changed) {
+        toastr.info('範例標籤已存在，不重複附加', '', { timeOut: 1000 });
+      }
+      this.value = '';
     });
 
     tagInput.on('input', function() {
       localStorage.setItem(TAG_STORAGE_KEY, this.value.trim());
+    });
+
+        saveTagBtn.on('click', function() {
+      const currentTag = String(tagInput.val() ?? '').trim();
+      const savedTag = saveTagToList(currentTag);
+      renderSavedTagList();
+
+      if (!savedTag) {
+        toastr.info('請先輸入標籤內容', '', { timeOut: 900 });
+        return;
+      }
+      if (savedTag.status === 'exists') {
+        toastr.info('標籤已存在，未重複保存', '', { timeOut: 1000 });
+        return;
+      }
+
+      toastr.success('標籤已保存', '', { timeOut: 1000 });
+    });
+
+    clearTagBtn.on('click', function() {
+      tagInput.val('');
+      localStorage.setItem(TAG_STORAGE_KEY, '');
+      tagInput.trigger('focus');
+      toastr.success('已清空標籤輸入', '', { timeOut: 900 });
     });
 
 // 新增：繁體變體選擇
@@ -692,6 +808,87 @@ const btn = $(`
   loadSetting();
   toggleButtonsVisibility();
   new MutationObserver(injectMenu).observe(document.body, {childList:true, subtree:true});
+
+
+// Step 1：抓「真正訊息 DOM」（排除 template）
+const elements = Array.from(document.querySelectorAll('.mes'))
+  .filter(el => !el.closest('#message_template'));
+
+// Step 2：用 index 對應 message
+const allMsgs = getChatMessages();
+elements.forEach((el, index) => {
+  const msgObj = allMsgs[index];
+  if (!msgObj) return;
+  console.log(index, msgObj.message);
+});
+
+// 建立觀察器
+const observer = new IntersectionObserver((entries) => {
+  const allMsgs = getChatMessages();
+
+  entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+
+    const el = entry.target;
+
+    if (el.dataset.converted === 'true') return;
+
+    const elements = Array.from(document.querySelectorAll('.mes'))
+      .filter(e => !e.closest('#message_template'));
+
+    const index = elements.indexOf(el);
+    if (index === -1) return;
+
+    const msgObj = allMsgs[index];
+    if (!msgObj) return;
+
+    let msg = String(msgObj.message || '');
+    if (!msg) return;
+
+    let newMsg = msg;
+
+    // 👉 你的轉換
+    const receiveMode = getState('auto-trad') ? 'traditional' :
+                        getState('auto-simp') ? 'simplified' : null;
+
+    if (receiveMode) {
+      newMsg = convert(newMsg, receiveMode);
+    }
+
+    if (newMsg !== msg) {
+      setChatMessages(
+        [{ message_id: msgObj.message_id, message: newMsg }],
+        { refresh: 'affected' }
+      );
+    }
+
+    el.dataset.converted = 'true';
+  });
+}, {
+  root: null,
+  threshold: 0,
+  rootMargin: '300px'
+});
+
+// Observe綁定
+window.observeAllMessages = function () {
+  const elements = Array.from(document.querySelectorAll('.mes'))
+    .filter(el => !el.closest('#message_template'));
+
+  console.log('valid:', elements.length);
+
+  elements.forEach(el => {
+    if (!el.dataset.observing) {
+      observer.observe(el);
+      el.dataset.observing = 'true';
+    }
+  });
+};
+
+setTimeout(() => {
+  console.log('manual run');
+  observeAllMessages();
+}, 2000);
 
   /* =========================
       自動轉換回覆（包含自訂 tag）
