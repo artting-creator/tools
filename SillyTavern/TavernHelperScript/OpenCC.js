@@ -29,14 +29,30 @@ let convTWPToSimp = null; // 台版詞語轉簡
 
 // OpenCC 模組載入：本地優先，CDN 備援
 const loadOpenCCModule = async () => {
-  const sources = [
-    '/opencc-js-1.0.5.esm.js',
+  const localSource = '/opencc-js-1.0.5.esm.js';
+  const remoteSources = [
     'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm',
     'https://testingcf.jsdelivr.net/npm/opencc-js@1.0.5/+esm',
   ];
 
   let lastErr = null;
-  for (const url of sources) {
+
+  // 先探測本地檔是否存在且回傳 JS MIME，避免缺檔時瀏覽器噴出 module MIME 錯誤
+  try {
+    const probe = await fetch(localSource, { method: 'GET', cache: 'no-store' });
+    const ct = String(probe.headers.get('content-type') || '').toLowerCase();
+    const okMime = ct.includes('javascript') || ct.includes('ecmascript') || ct.includes('text/plain');
+    if (probe.ok && okMime) {
+      const mod = await import(localSource);
+      console.info('[OpenCC] module loaded from:', localSource);
+      return mod;
+    }
+    console.info('[OpenCC] local module skipped:', localSource, 'status=', probe.status, 'content-type=', ct || 'unknown');
+  } catch (err) {
+    console.info('[OpenCC] local module unavailable, fallback to CDN:', err?.message || err);
+  }
+
+  for (const url of remoteSources) {
     try {
       const mod = await import(url);
       console.info('[OpenCC] module loaded from:', url);
