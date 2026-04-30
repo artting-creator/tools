@@ -27,11 +27,33 @@ let convSimp = null;
 let convTradTWP = null; // 台版詞語轉繁
 let convTWPToSimp = null; // 台版詞語轉簡
 
+// OpenCC 模組載入：本地優先，CDN 備援
+const loadOpenCCModule = async () => {
+  const sources = [
+    '/opencc-js-1.0.5.esm.js',
+    'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm',
+    'https://testingcf.jsdelivr.net/npm/opencc-js@1.0.5/+esm',
+  ];
+
+  let lastErr = null;
+  for (const url of sources) {
+    try {
+      const mod = await import(url);
+      console.info('[OpenCC] module loaded from:', url);
+      return mod;
+    } catch (err) {
+      lastErr = err;
+      console.warn('[OpenCC] module load failed:', url, err?.message || err);
+    }
+  }
+
+  throw (lastErr || new Error('OpenCC module load failed'));
+};
 // ensureConverter：一次建立三個（同步）
 const ensureConverter = async () => {
   if (convTradT && convTradTW && convTradHK && convTradTWP && convSimp) return;
 
-  const module = await import('https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm');
+  const module = await loadOpenCCModule();
 
   convTradT  = module.Converter({ from: 'cn', to: 't' });
   convTradTW = module.Converter({ from: 'cn', to: 'tw' });
@@ -810,18 +832,6 @@ const btn = $(`
   new MutationObserver(injectMenu).observe(document.body, {childList:true, subtree:true});
 
 
-// Step 1：抓「真正訊息 DOM」（排除 template）
-const elements = Array.from(document.querySelectorAll('.mes'))
-  .filter(el => !el.closest('#message_template'));
-
-// Step 2：用 index 對應 message
-const allMsgs = getChatMessages();
-elements.forEach((el, index) => {
-  const msgObj = allMsgs[index];
-  if (!msgObj) return;
-  console.log(index, msgObj.message);
-});
-
 // 建立觀察器
 const observer = new IntersectionObserver((entries) => {
   const allMsgs = getChatMessages();
@@ -953,4 +963,4 @@ eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
   }
 });
 
-  console.log('[OpenCC Final] 腳本完成初始化');
+  console.log('[OpenCC] 腳本完成初始化');
