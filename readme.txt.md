@@ -51,11 +51,11 @@ https://artting.neocities.org//tools//GBK_BIG5_UI
 目前只有一個酒館助手的腳本 TavernHelperScript  
 
 opencc-js-1.0.5.esm.js：  
-這是從CDN下載+esm檔，再照格式取名  
+從CDN下載的+esm檔，再照格式取名  
 https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm  
 
 OpenCC.js：  
 腳本連結的檔案  
 
-OpenCCv2.2.1.json：  
+OpenCCv2.3.json：  
 酒館助手腳本-繁簡轉換器  

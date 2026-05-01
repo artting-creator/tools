@@ -13,6 +13,8 @@ $('.opencc-btn').remove();
   };
 
 const VARIANT_STORAGE_KEY = 'opencc_trad_variant';
+const UI_FONT_SIZE_KEY = 'opencc_ui_font_size_percent';
+const UI_FONT_SIZE_DEFAULT = 65;
 const DEFAULT_VARIANT = 't';  // 官版
 
   const MENU_ID = 'th-custom-extension-menu-item';
@@ -208,6 +210,42 @@ const saveTagList = (list) => {
   localStorage.setItem(TAG_LIST_STORAGE_KEY, JSON.stringify(list));
 };
 
+const exportSavedTagListText = (list) => {
+  const lines = [
+    '# OpenCC custom tag list',
+    '# format: tag<TAB>note',
+    '# one item per line',
+  ];
+  list.forEach((item) => {
+    const tag = String(item?.tag ?? '').trim();
+    if (!tag) return;
+    const note = String(item?.note ?? '').replace(/\r?\n/g, ' ').trim();
+    lines.push(`${tag}\t${note}`);
+  });
+  return lines.join('\n');
+};
+
+const parseSavedTagListText = (text) => {
+  const rows = String(text ?? '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith('#'));
+
+  const seen = new Set();
+  const result = [];
+
+  rows.forEach((line) => {
+    const [tagPart, ...noteParts] = line.split('\t');
+    const tag = String(tagPart ?? '').trim();
+    if (!tag || seen.has(tag)) return;
+    const note = noteParts.join('\t').trim();
+    seen.add(tag);
+    result.push({ tag, note });
+  });
+
+  return result.slice(0, 50);
+};
+
 const saveTagToList = (tagValue) => {
   const tag = String(tagValue ?? '').trim();
   if (!tag) return null;
@@ -215,7 +253,7 @@ const saveTagToList = (tagValue) => {
   if (list.some(item => item.tag === tag)) {
     return { status: 'exists', tag };
   }
-  const next = [{ tag, note: '' }, ...list].slice(0, 30);
+  const next = [{ tag, note: '' }, ...list].slice(0, 50);
   saveTagList(next);
   return { status: 'saved', tag };
 };
@@ -504,20 +542,29 @@ if (!document.getElementById('opencc-mobile-style')) {
       }
 
       .th-custom-popup-ui h3{
-        font-size:20px;
+        font-size:calc(2rem * var(--opencc-font-scale, 0.65));
       }
 
       .th-custom-popup-ui label{
-      font-size:12px; /* 縮小字體 */
+      font-size:calc(1.2rem * var(--opencc-font-scale, 0.65)); /* 縮小字體 */
       line-height:1.2; /* 調整行距 */
       }
   #custom-tag-input{
-    font-size:14px;
+    font-size:calc(1.4rem * var(--opencc-font-scale, 0.65));
   }
     }
   `;
   document.head.appendChild(style);
 }
+    const getUIFontSizePercent = () => {
+      const saved = Number(localStorage.getItem(UI_FONT_SIZE_KEY));
+      return Number.isFinite(saved) ? saved : UI_FONT_SIZE_DEFAULT;
+    };
+    const setUIFontSizePercent = (nextPercent) => {
+      const normalized = Math.max(40, Math.min(120, Number(nextPercent) || UI_FONT_SIZE_DEFAULT));
+      localStorage.setItem(UI_FONT_SIZE_KEY, String(normalized));
+      return normalized;
+    };
     const checkboxes = settings.map(item => `
  <div style="
   display:flex;
@@ -539,7 +586,7 @@ cursor:pointer;
   cursor:pointer;
   color:#eee;
   line-height:1.2; /* 行距 */
-  font-size:18px; /* 字體 */
+  font-size:calc(1.8rem * var(--opencc-font-scale, 0.65)); /* 字體 */
   flex:1;
 ">
           ${item.name}
@@ -549,13 +596,13 @@ cursor:pointer;
 
 const variantSection = `
   <div style="margin-top: 24px;">
-    <select id="trad-variant" style="width:100%; padding:10px; font-size:18px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
+    <select id="trad-variant" style="width:100%; padding:10px; font-size:calc(1.8rem * var(--opencc-font-scale, 0.65)); background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
       <option value="t" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 't' || !localStorage.getItem(VARIANT_STORAGE_KEY) ? 'selected' : ''}>官版繁體 (t)</option>
       <option value="tw" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'tw' ? 'selected' : ''}>台版繁體 (tw)</option>
       <option value="hk" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'hk' ? 'selected' : ''}>港版繁體 (hk)</option>
       <option value="twp" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'twp' ? 'selected' : ''}>台版繁體+詞語转换 (twp)</option>
     </select>
-    <div class="tag-help" style="margin-top:6px; font-size:16px; color:#aaa; line-height:1.4;">
+    <div class="tag-help" style="margin-top:6px; font-size:calc(1.6rem * var(--opencc-font-scale, 0.65)); color:#aaa; line-height:1.4;">
       <div class="trad-text">
         繁體版本影響：輸入框、本樓、自動回覆、標籤內容的所有繁體轉換
       </div>
@@ -570,7 +617,7 @@ const variantSection = `
     const customTagValue = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
 
 const tagSection = `
-  <div style="margin-top: 24px;">    <select id="tag-preset" style="width:100%; padding:8px; font-size:18px; margin-bottom:8px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
+  <div style="margin-top: 24px;">    <select id="tag-preset" style="width:100%; padding:8px; font-size:calc(1.8rem * var(--opencc-font-scale, 0.65)); margin-bottom:8px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
       <option value="" selected disabled>標籤設定範例</option>
       <option value="[IMG]">例一：[tag][/tag]成對中括號</option>
       <option value="<action>">例二：&lt;tag&gt;&lt;/tag&gt;成對尖括號</option>
@@ -583,32 +630,45 @@ const tagSection = `
 style="
   flex:1;
   padding:10px;
-  font-size:18px;
+  font-size:calc(1.8rem * var(--opencc-font-scale, 0.65));
   background:#1e1e1e;
   color:#eee;
   border:1px solid #555;
   border-radius:6px;
   font-family:monospace;
 ">
-      <button type="button" id="save-custom-tag-btn" class="menu_button" style="white-space:nowrap; min-width:72px;">保存</button>
-      <button type="button" id="clear-custom-tag-btn" class="menu_button" style="white-space:nowrap; min-width:72px;">清除</button>
+      <button type="button" id="save-custom-tag-btn" class="menu_button" style="white-space:nowrap; width:56px; height:34px; padding:0; font-size:calc(1.5rem * var(--opencc-font-scale, 0.65));">保存</button>
+      <button type="button" id="clear-custom-tag-btn" class="menu_button" style="white-space:nowrap; width:56px; height:34px; padding:0; font-size:calc(1.5rem * var(--opencc-font-scale, 0.65));">清除</button>
     </div>
     <details id="saved-tag-list-wrap" style="margin-top:8px; border:1px solid #555; border-radius:6px; padding:8px; background:#1f1f20;">
-      <summary style="cursor:pointer; color:#ddd; font-size:18px;">自訂標籤列表</summary>
+      <summary style="cursor:pointer; color:#ddd; font-size:calc(1.8rem * var(--opencc-font-scale, 0.65)); list-style:none;">
+        <span style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <span>自訂標籤列表</span>
+          <span style="display:flex; align-items:center; gap:6px;">
+            <button type="button" id="import-tag-list-btn" class="menu_button" style="white-space:nowrap; min-width:56px; height:34px; padding:0 8px; font-size:calc(1.5rem * var(--opencc-font-scale, 0.65)); line-height:1;">導入</button>
+            <button type="button" id="export-tag-list-btn" class="menu_button" style="white-space:nowrap; min-width:56px; height:34px; padding:0 8px; font-size:calc(1.5rem * var(--opencc-font-scale, 0.65)); line-height:1;">導出</button>
+          </span>
+        </span>
+      </summary>
+      <input type="file" id="import-tag-list-file" accept=".txt,text/plain" style="display:none;">
       <div id="saved-tag-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
     </details>
-<div class="tag-help" style="margin-top:6px; font-size:16px; color:#aaa; line-height:1.4;">
+<div class="tag-help" style="margin-top:6px; font-size:calc(1.6rem * var(--opencc-font-scale, 0.65)); color:#aaa; line-height:1.4;">
   <div class="trad-text">
     • 標籤設定可參考範例<br>
     • 勾選標籤內容轉為繁/簡體，標籤才有效<br>
-    • 應用場景：例如生圖時產生的路徑不可轉繁簡，或正則只抓取繁/簡體角色名<br>
-    • 標籤可保存並自訂備註
+    • 應用場景例如生圖的路徑，例如正則抓取<br>
+    • 保存：保存到列表，上限50筆<br>
+    • 清除：清除標籤輸入框內容<br>
+    • 標籤列表內可自訂備註，方便點選
   </div>
   <div class="simp-text" style="display:none;">
     • 标签设定可参考范例<br>
     • 勾选标签内容转为繁/简体，标签才有效<br>
-    • 应用场景：例如生图时产生的路径不可转繁简，或正则只抓取繁/简体角色名<br>
-    • 标签可保存并自订备注
+    • 应用场景例如生图的路径，例如正则抓取<br>
+    • 保存：保存到列表，上限50笔<br>
+    • 清除：清除标签输入框内容<br>
+    • 标签列表内可自订备注，方便点选
   </div>
 </div>
   </div>
@@ -638,14 +698,22 @@ overflow-y:auto;
 
   box-shadow:0 0 30px rgba(0,0,0,0.7);
   font-family:system-ui,sans-serif;
+  --opencc-font-scale:${getUIFontSizePercent() / 100};
 ">
-        <h3 style="margin:0 0 20px; font-size:26px; text-align:center; color:#eee;">Setting</h3>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 20px; gap:8px;">
+          <h3 style="margin:0; font-size:calc(2.6rem * var(--opencc-font-scale, 0.65)); text-align:left; color:#eee;">Setting</h3>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <button type="button" id="opencc-font-dec" class="menu_button" style="margin:0; min-width:32px; height:32px; padding:0 8px; font-size:calc(1.6rem * var(--opencc-font-scale, 0.65)); line-height:1;">-</button>
+            <button type="button" id="opencc-font-reset" class="menu_button" style="margin:0; min-width:64px; height:32px; padding:0 10px; font-size:calc(1.4rem * var(--opencc-font-scale, 0.65)); line-height:1; white-space:nowrap;">字体</button>
+            <button type="button" id="opencc-font-inc" class="menu_button" style="margin:0; min-width:32px; height:32px; padding:0 8px; font-size:calc(1.6rem * var(--opencc-font-scale, 0.65)); line-height:1;">+</button>
+          </div>
+        </div>
         ${checkboxes}
         ${tagSection}
 		${variantSection}
         <button type="button" class="menu_button th-custom-popup-close" style="
           margin-top:24px; width:100%; padding:12px; background:#f44336; color:white;
-          border:none; border-radius:6px; cursor:pointer; font-size:21px; transition: background 0.2s;">
+          border:none; border-radius:6px; cursor:pointer; font-size:calc(2.1rem * var(--opencc-font-scale, 0.65)); transition: background 0.2s;">
           Close
         </button>
       </div>
@@ -715,23 +783,57 @@ const variantSelect = popup.find('#trad-variant');
     const clearTagBtn = popup.find('#clear-custom-tag-btn');
     const savedTagWrap = popup.find('#saved-tag-list-wrap');
     const savedTagList = popup.find('#saved-tag-list');
+    const importTagListBtn = popup.find('#import-tag-list-btn');
+    const exportTagListBtn = popup.find('#export-tag-list-btn');
+    const importTagListFile = popup.find('#import-tag-list-file');
+    importTagListBtn.add(exportTagListBtn).on('mousedown click', function(e) { e.stopPropagation(); });
+    const fontDecBtn = popup.find('#opencc-font-dec');
+    const fontResetBtn = popup.find('#opencc-font-reset');
+    const fontIncBtn = popup.find('#opencc-font-inc');
+
+    const applyPopupFontSize = (nextPercent) => {
+      const finalPercent = setUIFontSizePercent(nextPercent);
+      popup.css('--opencc-font-scale', `${finalPercent / 100}`);
+      return finalPercent;
+    };
+
+    fontDecBtn.on('click', () => {
+      const current = getUIFontSizePercent();
+      applyPopupFontSize(current - 5);
+    });
+    fontIncBtn.on('click', () => {
+      const current = getUIFontSizePercent();
+      applyPopupFontSize(current + 5);
+    });
+    fontResetBtn.on('click', () => {
+      applyPopupFontSize(UI_FONT_SIZE_DEFAULT);
+      toastr.success('已恢復預設大小', '', { timeOut: 1000 });
+    });
 
     const renderSavedTagList = () => {
       const list = loadSavedTagList();
       savedTagList.empty();
+      const escapeHtml = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 
       if (!list.length) {
-        savedTagList.append('<span style="font-size:15px; color:#888;">尚未保存任何標籤</span>');
+        savedTagList.append('<span style="font-size:calc(1.5rem * var(--opencc-font-scale, 0.65)); color:#888;">尚未保存任何標籤</span>');
         return;
       }
 
       list.forEach((item, index) => {
+        const safeTag = escapeHtml(item.tag);
+        const safeNote = escapeHtml(item.note ?? '');
         const row = $(`
-          <div style="display:grid; grid-template-columns:38px 1fr 1fr 56px; gap:6px; align-items:center;">
-            <div style="font-size:15px; color:#aaa; text-align:center;">${index + 1}</div>
-            <input type="text" class="saved-tag-note" data-tag-index="${index}" value="${String(item.note ?? '').replace(/"/g, '&quot;')}" placeholder="備註" style="min-width:0; padding:6px; font-size:15px; background:#262626; color:#eee; border:1px solid #555; border-radius:4px;">
-            <button type="button" class="menu_button saved-tag-item" data-tag-index="${index}" style="margin:0; padding:6px 8px; font-size:15px; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${String(item.tag).replace(/"/g, '&quot;')}">${item.tag}</button>
-            <button type="button" class="menu_button saved-tag-delete" data-tag-index="${index}" style="margin:0; width:56px; height:34px; padding:0; font-size:15px; line-height:1;">刪除</button>
+          <div style="display:grid; grid-template-columns:38px minmax(0,1fr) minmax(140px,1fr) 56px; gap:6px; align-items:center;">
+            <div style="font-size:calc(1.5rem * var(--opencc-font-scale, 0.65)); color:#aaa; text-align:center;">${index + 1}</div>
+            <input type="text" class="saved-tag-note" data-tag-index="${index}" value="${safeNote}" placeholder="備註" style="min-width:0; padding:6px; font-size:calc(1.5rem * var(--opencc-font-scale, 0.65)); background:#262626; color:#eee; border:1px solid #555; border-radius:4px;">
+            <button type="button" class="menu_button saved-tag-item" data-tag-index="${index}" style="margin:0; width:100%; min-width:140px; max-width:100%; padding:6px 8px; font-size:calc(1.5rem * var(--opencc-font-scale, 0.65)); text-align:left;" title="${safeTag}"><span style="display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left;">${safeTag}</span></button>
+            <button type="button" class="menu_button saved-tag-delete" data-tag-index="${index}" style="margin:0; width:56px; height:34px; padding:0; font-size:calc(1.5rem * var(--opencc-font-scale, 0.65)); line-height:1;">刪除</button>
           </div>
         `);
 
@@ -792,7 +894,7 @@ const variantSelect = popup.find('#trad-variant');
         return;
       }
       if (savedTag.status === 'exists') {
-        toastr.info('標籤已存在，未重複保存', '', { timeOut: 1000 });
+        toastr.info('標籤已存在，保存已生效', '', { timeOut: 1000 });
         return;
       }
 
@@ -804,6 +906,43 @@ const variantSelect = popup.find('#trad-variant');
       localStorage.setItem(TAG_STORAGE_KEY, '');
       tagInput.trigger('focus');
       toastr.success('已清空標籤輸入', '', { timeOut: 900 });
+    });
+
+    exportTagListBtn.on('click', function() {
+      const list = loadSavedTagList();
+      const content = exportSavedTagListText(list);
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'opencc-custom-tag-list.txt';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toastr.success('已導出標籤列表', '', { timeOut: 1000 });
+    });
+
+    importTagListBtn.on('click', function() {
+      importTagListFile.val('');
+      importTagListFile.trigger('click');
+    });
+
+    importTagListFile.on('change', function(event) {
+      const file = event.target?.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const nextList = parseSavedTagListText(String(reader.result ?? ''));
+        saveTagList(nextList);
+        renderSavedTagList();
+        toastr.success(`已導入 ${nextList.length} 筆標籤`, '', { timeOut: 1000 });
+      };
+      reader.onerror = () => {
+        toastr.error('導入失敗，請確認檔案格式', '', { timeOut: 1200 });
+      };
+      reader.readAsText(file, 'utf-8');
     });
 
 // 新增：繁體變體選擇
@@ -829,10 +968,10 @@ toastr.success(`已切換為 ${labelt}`, '', { timeOut: 1100 });
       加入 extensions menu
   ========================== */
   const injectMenu = () => {
-    if (document.getElementById(MENU_ID)) return;
     const menu = $('#extensionsMenu');
     if (!menu.length) return;
     const list = menu.find('.list-group').first().length ? menu.find('.list-group').first() : menu;
+    list.find(`#${MENU_ID}, .opencc-btn`).remove();
 const btn = $(`
   <a id="${MENU_ID}" class="list-group-item opencc-btn" href="javascript:void(0)">
     <i class="fa-solid fa-language"></i> ${MENU_NAME}
