@@ -5,19 +5,20 @@
 <meta charset="UTF-8">
 <title>繁簡轉換工具</title>
 
-<script src="full.js">
+<script src="full.js"></script>
+<!--
 // opencc-js[](https://github.com/nk2028/opencc-js)
 // License: MIT
 // Copyright (c) nk2028 和貢獻者
-// 完整 license：https://github.com/nk2028/opencc-js/blob/main/LICENSE
-</script>
-
-<script src="iconv-browser.js">
+// license：https://github.com/nk2028/opencc-js/blob/main/LICENSE
+ -->
+<!-- 
 // iconv-browser.js - 自製瀏覽器版，基於 iconv-lite
 // License: MIT
 // Copyright (c) 2011 Alexander Shtuchkin
-// 完整 license 請參考：https://github.com/ashtuchkin/iconv-lite/blob/master/LICENSE
-</script>
+// license：https://github.com/ashtuchkin/iconv-lite/blob/master/LICENSE
+-->
+<script src="iconv-browser.js"></script>
 
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0">
@@ -59,7 +60,7 @@ html {
 /* ===== 標題列 ===== */
 .topbar {
     display: flex;
-	flex-direction: row;
+  	flex-direction: row;
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
@@ -70,8 +71,8 @@ html {
 
 .title {
     margin: 2px;
-    font-size: 2.8rem;
-    font-weight: 600;
+    font-size: 2.6rem;
+    font-weight: 700;
     line-height: 1.2;
     margin: 0;
     color: #2d3a4b;
@@ -103,24 +104,13 @@ html {
     padding: 0;
 }
 
-#langSelect {
-    padding: 12px 12px;           /* 加大內距，讓高度接近按鈕 */
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    font-size: 1.8rem;              /* 跟按鈕文字一樣大 */
-    background: white;
-    height: 48px;                 /* 強制和按鈕一樣高 */
-    box-sizing: border-box;
-}
-
-
 /* ===== 文字框 ===== */
 textarea {
     width: 100%;
     min-height: 180px;           /* 最小高度保證可讀 */
     height: 35vh;                /* 手機佔螢幕 35% 左右 */
     max-height: 50vh;            /* 不要過高蓋住按鈕 */
-    font-size: 2rem;           /* ≥16px 避免 iOS 自動 zoom */
+    font-size: 1.9rem;           /* ≥16px 避免 iOS 自動 zoom */
     padding: 14px;
     border-radius: 10px;
     border: 1px solid #d7dce6;
@@ -186,6 +176,25 @@ button.primary:hover {
     background: #4b78e6;
 }
 
+/* 功能按鈕字體統一（轉換/版本/貼上/複製/修復/清空/交換） */
+#toggleConvertBtn,
+#convertButton,
+#pasteBtn,
+#copyOutputBtn,
+#fixGbkBtn,
+#fixBig5Btn,
+#clearInputBtn,
+#clearOutputBtn,
+#swapBtn {
+    font-size: 1.7rem;
+    font-weight: 400;
+    line-height: 1.2;
+}
+
+#toggleConvertBtn {
+    font-weight: bold;
+}
+
 
 /* 繁簡轉換按鈕 + 下拉選單 同一排優化 */
 .convert-row {
@@ -227,7 +236,6 @@ button.primary:hover {
 }
 
 /* 下拉選單內 option 的 hover 統一優化 */
-#langSelect option:hover,
 #convertOption option:hover {
     background-color: rgba(91, 140, 255, 0.15);   /* 淡藍色，與面板同色系 */
     color: inherit;
@@ -379,9 +387,8 @@ letter-spacing:0.3px;
 
 
 body.dark .customize-panel,
-body.dark #langSelect,
 body.dark #convertOption {
-background: rgba(35, 39, 47, 0.75);        /* 深色半透明 */
+    background: rgba(35, 39, 47, 0.75);        /* 深色半透明 */
     backdrop-filter: blur(1px);
     color: #eee;
     border-color: #555;
@@ -394,9 +401,8 @@ body.dark .checkbox-list label {
 }
 
 body.dark .checkbox-list label:hover,
-body.dark #langSelect:hover,
 body.dark #convertOption:hover {
-background: rgba(123, 163, 255, 0.18);
+    background: rgba(123, 163, 255, 0.18);
     border-color: #7ba3ff;
 }
 
@@ -418,12 +424,11 @@ body.dark .panel-footer {
 
     .top-controls {
         width: 100%;
-        display: flex;
         flex: 0 0 100%;   /* 強制換到下一行 */
         flex-direction: row;
         justify-content: space-between;   /* 填滿 */
         gap: 6px;
-		        min-width: 0;
+        min-width: 0;
     }
 	/* === 強制三個控制項填滿可用空間 === 但無效 */
     .top-controls > * {
@@ -451,12 +456,11 @@ body.dark .panel-footer {
     textarea {
         height: 30vh;
         min-height: 160px;
-        font-size: 1.8rem;
+        font-size: 1.5rem;
         line-height: 1.5;
     }
 
     .section {
-        display: flex;
         flex-direction: column;
         gap: 2px;
         margin: 2px 0;
@@ -475,6 +479,22 @@ body.dark .panel-footer {
         min-width: 0;
         box-sizing: border-box;
         width: 0;                   /* 配合 flex 讓它真正均分 */
+    }
+
+    /* 修復亂碼兩顆按鈕：點擊回饋改字時保持尺寸穩定 */
+    #fixGbkBtn,
+    #fixBig5Btn {
+        flex: 1 1 0;
+        width: 0;
+        min-width: 0;
+        height: 48px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.2;
     }
 
 /* checkbox 組：強制同一行水平並排，不包裝成按鈕 */
@@ -521,7 +541,6 @@ body.dark .checkbox-item {
     text-overflow: ellipsis;
 }
 
-
 .checkbox-list {
     max-height: 340px;
     overflow-y: auto;
@@ -532,8 +551,6 @@ body.dark .checkbox-item {
 
     /* 最後三顆組：同一列 + 平均分布 */
     .button-row.triple {
-        display: flex;
-        flex-direction: row;
         justify-content: space-between;  /* 關鍵：左右平均分布 */
         gap: 10px;
         width: 100%;
@@ -543,7 +560,7 @@ body.dark .checkbox-item {
         flex: 1 1 30%;              /* 盡量三等分 */
         min-width: 90px;            /* 避免過窄 */
         white-space: nowrap;
-        font-size: 1.8rem;
+        font-size: 1.7rem;
         padding: 12px 10px;
         text-align: center;         /* 文字置中，看起來更平均 */
     }
@@ -553,7 +570,6 @@ body.dark .checkbox-item {
         padding: 6px 10px;
         font-size: 1.7rem;
         min-height: 48px;
-        border-radius: 8px;
     }
 
 }
@@ -564,43 +580,97 @@ body.dark .checkbox-item {
     .container {
         margin: 32px auto;
         padding: 32px 40px;
-        max-width: 1100px;
     }
 
     textarea {
         height: 320px;              /* 桌面固定高度 */
         min-height: 280px;
-    margin-top: 8px;
-    margin-bottom: 8px;
+        margin-top: 8px;
+        margin-bottom: 8px;
     }
 
     .section {
-        flex-wrap: wrap;
         gap: 8px;
     }
 
 
     .button-row {
-	    display: flex;               /* 確保使用 Flexbox */
+	    display: flex;
         flex-wrap: wrap;
         gap: 12px;
-	    margin-left: auto;   /* 按鈕靠右 */
-		width: 33%;
+        box-sizing: border-box;
+        margin-left: 0;
     }
 
-
-    .button-row.triple {
-        flex-wrap: wrap;
-        gap: 12px;
+    .button-row:not(.fix-row):not(.action-row):not(.quick-row) {
+        width: 100%;
     }
 
-    .button-row > *,
-    .button-row.triple > * {
+    .convert-row {
+        flex: 0 0 calc((100% - 8px) * 0.55);
+        max-width: calc((100% - 8px) * 0.55);
+    }
+
+    .button-row.quick-row {
+        flex: 0 0 calc((100% - 8px) * 0.45);
+        max-width: calc((100% - 8px) * 0.45);
+        flex-wrap: nowrap;
+        margin: 0;
+    }
+
+    .button-row.fix-row,
+    .button-row.triple.action-row {
+        box-sizing: border-box;
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        margin: 0;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .button-row.fix-row {
+        flex: 0 0 calc((100% - 8px) * 0.38);
+        max-width: calc((100% - 8px) * 0.38);
+    }
+
+    .button-row.triple.action-row {
+        flex: 0 0 calc((100% - 8px) * 0.62);
+        max-width: calc((100% - 8px) * 0.62);
+        gap: 8px;
+    }
+
+    .button-row > * {
         flex: 0 1 auto;             /* 不強制等寬 */
+    }
+
+    .button-row.fix-row > *,
+    .button-row.triple.action-row > * {
+        flex: 1 1 0;
+        min-width: 0;
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .button-row.triple.action-row > * {
+        white-space: nowrap;
+        padding: 10px 8px;
     }
 
     button {
         padding: 10px 18px;
+    }
+
+    #toggleConvertBtn,
+    #convertButton,
+    #pasteBtn,
+    #copyOutputBtn,
+    #fixGbkBtn,
+    #fixBig5Btn,
+    #clearInputBtn,
+    #clearOutputBtn,
+    #swapBtn {
         font-size: 1.8rem;
     }
 }
@@ -781,6 +851,19 @@ body.dark .checkbox-list label:hover {
                 </label>
                 
                 <label>
+                    <input type="checkbox" id="showPasteAppendNoNewline" checked>
+                    <span data-i18n="showPasteAppendNoNewline">附加貼上不換行 勾選框</span>
+                </label>
+                <label>
+                    <input type="checkbox" id="showAppendOutput" checked>
+                    <span data-i18n="showAppendOutput">附加輸出 勾選框</span>
+                </label>
+                <label>
+                    <input type="checkbox" id="showAppendOutputNoNewline" checked>
+                    <span data-i18n="showAppendOutputNoNewline">附加輸出不換行 勾選框</span>
+                </label>
+                
+                <label>
                     <input type="checkbox" id="showCustomFixMap" checked>
                     <span data-i18n="showCustomFixMap">用修復表的勾選框</span>
                 </label>
@@ -857,7 +940,7 @@ body.dark .checkbox-list label:hover {
     </div>
 
     <!-- 複製相關 -->
-    <div class="button-row">
+    <div class="button-row quick-row">
         <button id="pasteBtn" 
 		    onmouseenter="highlightInput()" 
             onmouseleave="unhighlightInput()"
@@ -871,36 +954,13 @@ body.dark .checkbox-list label:hover {
     </div>
 
     <!-- 亂碼修復 -->
-    <div class="button-row">
+    <div class="button-row fix-row">
         <button id="fixGbkBtn" onclick="fixGbkDisplayedAsBig5()" data-i18n="fixGbk">修復GBK亂碼→簡體</button>
         <button id="fixBig5Btn" onclick="fixBig5DisplayedAsGbk()" data-i18n="fixBig5">修復BIG5亂碼→繁體</button>
     </div>
 
-
-
-
-<!-- 勾選框（兩個獨立控制） -->
-<div class="checkbox-row">
-    <div class="checkbox-group">
-        <label class="checkbox-item">
-            <input type="checkbox" id="pasteAppend">
-            <span data-i18n="append">附加貼上</span>
-        </label>
-    </div>
-</div>
-
-<div class="checkbox-row">
-    <div class="checkbox-group">
-        <label class="checkbox-item">
-            <input type="checkbox" id="CustomFixMap" checked>
-            <span data-i18n="customFix">修復時套用自定義修復表</span>
-        </label>
-    </div>
-</div>
-
-
     <!-- 清空與互換 -->
-    <div class="button-row triple">
+    <div class="button-row triple action-row">
         <button id="clearInputBtn" 
 		    onmouseenter="highlightInput()" 
             onmouseleave="unhighlightInput()" 
@@ -914,6 +974,42 @@ body.dark .checkbox-list label:hover {
         <button id="swapBtn" onclick="swapInputOutput()" data-i18n="swap">↕交換內容</button>
     </div>
 
+<!-- 勾選框 -->
+<div class="checkbox-row">
+    <div class="checkbox-group">
+        <label class="checkbox-item">
+            <input type="checkbox" id="pasteAppend">
+            <span data-i18n="append">附加貼上</span>
+        </label>
+        <label class="checkbox-item">
+            <input type="checkbox" id="pasteAppendNoNewline">
+            <span data-i18n="appendNoNewline">附加貼上不換行</span>
+        </label>
+    </div>
+</div>
+
+<div class="checkbox-row">
+    <div class="checkbox-group">
+        <label class="checkbox-item">
+            <input type="checkbox" id="appendOutput">
+            <span data-i18n="appendOutput">附加輸出</span>
+        </label>
+        <label class="checkbox-item">
+            <input type="checkbox" id="appendOutputNoNewline">
+            <span data-i18n="appendOutputNoNewline">附加輸出不換行</span>
+        </label>
+    </div>
+</div>
+
+<div class="checkbox-row">
+    <div class="checkbox-group">
+        <label class="checkbox-item">
+            <input type="checkbox" id="CustomFixMap" checked>
+            <span data-i18n="customFix">修復時套用自定義修復表</span>
+        </label>
+    </div>
+</div>
+
 </div>
 <textarea id="output" placeholder="結果..." data-i18n-placeholder="output"></textarea>
 
@@ -921,8 +1017,8 @@ body.dark .checkbox-list label:hover {
 
 function fixPUA(str){
 
-for(const k in puaMap){
-str = str.split(k).join(puaMap[k])
+for(const k in puaFixMap){
+str = str.split(k).join(puaFixMap[k])
 }
 
 return str
@@ -1002,7 +1098,7 @@ OpenCCLib=window.OpenCC
 }
 
 // ==================== Toast 反饋系統 ====================
-function showToast(message, type = 'success', duration = 1000) {
+function showToast(message, type = 'success', duration = 1300) {
     // 建立容器（只建立一次）
     let container = document.getElementById('toastContainer');
     if (!container) {
@@ -1057,6 +1153,23 @@ function unhighlightOutput() {
     output.classList.remove("hover-highlight");
 }
 
+function writeOutputResult(resultText) {
+    const outputEl = document.getElementById("output");
+    const appendOutput = !!document.getElementById("appendOutput")?.checked;
+    const appendOutputNoNewline = !!document.getElementById("appendOutputNoNewline")?.checked;
+
+    if (!appendOutput) {
+        outputEl.value = resultText;
+        return;
+    }
+
+    if (appendOutputNoNewline) {
+        outputEl.value += resultText;
+    } else {
+        outputEl.value += (outputEl.value ? "\n" : "") + resultText;
+    }
+}
+
 
 
 // 全域變數
@@ -1065,12 +1178,11 @@ let isT2S = true;
 let currentConvertMode = "t";     // 重要：與自訂下拉同步
 
 function toggleConvert() {
-    const input = document.getElementById("input").value.trim();
-    if (!input) {
+    const input = document.getElementById("input").value;
+    if (!input.trim()) {
         showToast(
             i18n[localStorage.getItem("lang") || "zh-TW"]?.inputEmpty || "請輸入文字", 
-            "warning", 
-            1500
+            "warning"
         );
         return;
     }
@@ -1102,14 +1214,14 @@ function toggleConvert() {
 
     try {
         const converter = OpenCCLib.Converter({ from: from, to: to });
-        document.getElementById("output").value = converter(input);
+        writeOutputResult(converter(input));
 
         const lang = localStorage.getItem("lang") || "zh-TW";
         const message = i18n[lang]?.[i18nKey] || (isT2S ? "已转为简体 ✓" : "已轉為繁體 ✓");
-        showToast(message, "success", 1300);
+        showToast(message, "success");
     } catch (err) {
         console.error("轉換錯誤:", err);
-        showToast("轉換失敗", "warning", 2000);
+        showToast("轉換失敗", "warning");
     }
 
     // 切換方向並更新按鈕文字
@@ -1120,9 +1232,9 @@ function toggleConvert() {
 
 // 繁體 → 簡體
 function convertT2S() {
-    const option = document.getElementById("convertOption").value;
-    const input = document.getElementById("input").value.trim();
-    if (!input) return;
+    const option = currentConvertMode;
+    const input = document.getElementById("input").value;
+    if (!input.trim()) return;
 
     let from = 't';
     if (option === 'twp') {
@@ -1130,14 +1242,14 @@ function convertT2S() {
     }
 
     const converter = OpenCCLib.Converter({ from: from, to: 'cn' });
-    document.getElementById("output").value = converter(input);
+    writeOutputResult(converter(input));
 }
 
 // 簡體 → 繁體（現在包含純 t）
 function convertS2T() {
-    const option = document.getElementById("convertOption").value;
-    const input = document.getElementById("input").value.trim();
-    if (!input) return;
+    const option = currentConvertMode;
+    const input = document.getElementById("input").value;
+    if (!input.trim()) return;
 
     let toVariant;
 
@@ -1159,16 +1271,16 @@ function convertS2T() {
     }
 
     const converter = OpenCCLib.Converter({ from: 'cn', to: toVariant });
-    document.getElementById("output").value = converter(input);
+    writeOutputResult(converter(input));
 }
 
 
 // GBK 被當 Big5 解讀顯示亂碼 → 修復成正確簡體
 function fixGbkDisplayedAsBig5() {
-    const input = document.getElementById("input").value.trim();
+    const input = document.getElementById("input").value;
     const btn = event.target;           // 取得被點的按鈕
     const originalText = btn.textContent;
-    if (!input) return;
+    if (!input.trim()) return;
 
     const useCustomFix = document.getElementById("CustomFixMap").checked;
 
@@ -1221,17 +1333,17 @@ function fixGbkDisplayedAsBig5() {
         }
     }
 
-    document.getElementById("output").value = output;
+    writeOutputResult(output);
     showFeedback(btn, t("fixok"), originalText);
 }
 
 
 // 亂碼修復 - Big5 被當成 GBK 解讀後顯示亂碼
 function fixBig5DisplayedAsGbk() {
-    const input = document.getElementById("input").value.trim();
+    const input = document.getElementById("input").value;
     const btn = event.target;           // 取得被點的按鈕
     const originalText = btn.textContent;
-    if (!input) return;
+    if (!input.trim()) return;
 
     const useCustomFix = document.getElementById("CustomFixMap").checked;
 
@@ -1284,7 +1396,7 @@ function fixBig5DisplayedAsGbk() {
         }
     }
 
-    document.getElementById("output").value = output;
+    writeOutputResult(output);
     showFeedback(btn, t("fixok"), originalText);
 }
 
@@ -1347,6 +1459,7 @@ function swapInputOutput() {
 function pasteFromClipboard() {
     const inputEl = document.getElementById("input");
     const appendMode = document.getElementById("pasteAppend").checked;
+    const appendNoNewline = document.getElementById("pasteAppendNoNewline").checked;
     const btn = event.target;  // 用來做反饋
     const originalText = btn.textContent;
 
@@ -1366,7 +1479,7 @@ function pasteFromClipboard() {
     try {
         success = document.execCommand("paste");
         if (success) {
-            pastedText = tempTextarea.value.trim();
+            pastedText = tempTextarea.value;
         }
     } catch (e) {
         console.warn("execCommand paste 失敗:", e);
@@ -1374,9 +1487,9 @@ function pasteFromClipboard() {
 
     document.body.removeChild(tempTextarea);
 
-    if (success && pastedText) {
+    if (success && pastedText.trim()) {
         // 成功了，直接處理
-        applyPastedText(pastedText, inputEl, appendMode, btn, originalText);
+        applyPastedText(pastedText, inputEl, appendMode, appendNoNewline, btn, originalText);
         return;
     }
 
@@ -1385,7 +1498,7 @@ function pasteFromClipboard() {
         navigator.clipboard.readText()
             .then(text => {
                 if (text.trim()) {
-                    applyPastedText(text.trim(), inputEl, appendMode, btn, originalText);
+                    applyPastedText(text, inputEl, appendMode, appendNoNewline, btn, originalText);
                 } else {
                     showFeedback(btn, t("clipboardEmpty"), originalText);
                 }
@@ -1402,9 +1515,13 @@ function pasteFromClipboard() {
 }
 
 // 處理貼上文字 + 反饋
-function applyPastedText(text, inputEl, appendMode, btn, originalText) {
+function applyPastedText(text, inputEl, appendMode, appendNoNewline, btn, originalText) {
     if (appendMode) {
-        inputEl.value += (inputEl.value ? "\n" : "") + text;
+        if (appendNoNewline) {
+            inputEl.value += text;
+        } else {
+            inputEl.value += (inputEl.value ? "\n" : "") + text;
+        }
     } else {
         inputEl.value = text;
     }
@@ -1416,8 +1533,13 @@ function applyPastedText(text, inputEl, appendMode, btn, originalText) {
 }
 
 function showFeedback(btn, msg, originalText) {
+    // 這兩顆修復按鈕改用 toast 回饋，避免文字變更造成尺寸抖動
+    if (btn && (btn.id === "fixGbkBtn" || btn.id === "fixBig5Btn")) {
+        showToast(msg, "success");
+        return;
+    }
     btn.textContent = msg;
-    setTimeout(() => { btn.textContent = originalText; }, 1100);
+    setTimeout(() => { btn.textContent = originalText; }, 900);
 }
 
 /* 深淺色模式切換 */
@@ -1462,6 +1584,7 @@ e.preventDefault()
 inputBox.classList.remove("dragover")
 
 const append = document.getElementById("pasteAppend").checked
+const appendNoNewline = document.getElementById("pasteAppendNoNewline").checked
 
 /* 1. 如果有檔案 */
 
@@ -1475,7 +1598,11 @@ reader.onload = function(ev){
 const text = ev.target.result
 
 if(append){
+if(appendNoNewline){
+inputBox.value += text
+}else{
 inputBox.value += (inputBox.value ? "\n" : "") + text
+}
 }else{
 inputBox.value = text
 }
@@ -1494,7 +1621,11 @@ const text = e.dataTransfer.getData("text")
 if(text){
 
 if(append){
+if(appendNoNewline){
+inputBox.value += text
+}else{
 inputBox.value += (inputBox.value ? "\n" : "") + text
+}
 }else{
 inputBox.value = text
 }
@@ -1526,8 +1657,11 @@ showPasteBtn:"剪貼簿貼到輸入",
 showCopyOutputBtn:"複製輸出結果",
 showFixGbkBtn:"修復GBK亂碼",
 showFixBig5Btn:"修復BIG5亂碼",
-showPasteAppend:"附加貼上的勾選框",
-showCustomFixMap:"用修復表的勾選框",
+showPasteAppend:"附加貼上 勾選框",
+showPasteAppendNoNewline:"附加貼上不換行 勾選框",
+showAppendOutput:"附加輸出 勾選框",
+showAppendOutputNoNewline:"附加輸出不換行 勾選框",
+showCustomFixMap:"用修復表 勾選框",
 showClearInputBtn:"清空輸入",
 showClearOutputBtn:"清空輸出",
 showSwapBtn:"交換內容",
@@ -1551,6 +1685,9 @@ twp: "台版繁體+詞語 (twp)",
 
 paste:"剪貼簿貼上",
 append:"附加貼上",
+appendNoNewline:"不換行",
+appendOutput:"附加輸出",
+appendOutputNoNewline:"不換行",
 
 clearInput:"清空輸入",
 swapok:"資料已互換",
@@ -1584,7 +1721,8 @@ clipboardNoSupport:
 clipboardCopy:"已複製 ✓",
 copyfail: "複製失敗",
 
-clipboardPaste:"已貼上 ✓"
+clipboardPaste:"已貼上 ✓",
+fontResetOk:"已恢復預設大小 ✓"
 
 },
 
@@ -1607,8 +1745,11 @@ showPasteBtn:"剪贴板贴到输入",
 showCopyOutputBtn:"拷贝输出结果",
 showFixGbkBtn:"修复GBK乱码",
 showFixBig5Btn:"修复BIG5乱码",
-showPasteAppend:"附加粘贴的勾选框",
-showCustomFixMap:"用修复表的勾选框",
+showPasteAppend:"附加粘贴 勾选框",
+showPasteAppendNoNewline:"追加粘贴不换行 勾选框",
+showAppendOutput:"追加输出 勾选框",
+showAppendOutputNoNewline:"追加输出不换行 勾选框",
+showCustomFixMap:"用修复表 勾选框",
 showClearInputBtn:"清空输入",
 showClearOutputBtn:"清空输出",
 showSwapBtn:"交换内容",
@@ -1632,6 +1773,9 @@ twp: "台版繁体+词语 (twp)",
 
 paste:"剪贴版贴上",
 append:"追加粘贴",
+appendNoNewline:"不换行",
+appendOutput:"追加输出",
+appendOutputNoNewline:"不换行",
 
 clearInput:"清空输入",
 swapok:"数据已互换",
@@ -1665,7 +1809,8 @@ clipboardNoSupport:
 clipboardCopy:"已复制 ✓",
 copyfail: "复制失败",
 
-clipboardPaste:"已贴上 ✓"
+clipboardPaste:"已贴上 ✓",
+fontResetOk:"已恢复默认大小 ✓"
 
 },
 
@@ -1688,8 +1833,11 @@ showPasteBtn:"Paste",
 showCopyOutputBtn:"Copy",
 showFixGbkBtn:"Fix GBK Garbled",
 showFixBig5Btn:"Fix Big5 Garbled",
-showPasteAppend:"Append Checkbox",
-showCustomFixMap:"Fix table Checkbox",
+showPasteAppend:"Append-Checkbox",
+showPasteAppendNoNewline:"Append-NoNewline-Checkbox",
+showAppendOutput:"Append-Output-Checkbox",
+showAppendOutputNoNewline:"Append-Output-NoNewline-Checkbox",
+showCustomFixMap:"Fix-table-Checkbox",
 showClearInputBtn:"ClearInput",
 showClearOutputBtn:"ClearOutput",
 showSwapBtn:"Swap",
@@ -1713,6 +1861,9 @@ twp: "Taiwan idiom conversion (twp)",
 
 paste:"Paste",
 append:"Append Paste",
+appendNoNewline:"without Newline",
+appendOutput:"Append Output",
+appendOutputNoNewline:"without Newline",
 
 clearInput:"Clear Input",
 swapok:"data swapped",
@@ -1746,7 +1897,8 @@ clipboardNoSupport:
 clipboardCopy:"copied ✓",
 copyfail: "copy failed",
 
-clipboardPaste:"pasted ✓"
+clipboardPaste:"pasted ✓",
+fontResetOk:"Default size restored ✓"
 
 }
 
@@ -1982,6 +2134,12 @@ const displayElements = {
     
     pasteAppend: document.getElementById('pasteAppend') ? 
                  document.getElementById('pasteAppend').parentElement : null,
+    pasteAppendNoNewline: document.getElementById('pasteAppendNoNewline') ? 
+                 document.getElementById('pasteAppendNoNewline').parentElement : null,
+    appendOutput: document.getElementById('appendOutput') ? 
+                 document.getElementById('appendOutput').parentElement : null,
+    appendOutputNoNewline: document.getElementById('appendOutputNoNewline') ? 
+                 document.getElementById('appendOutputNoNewline').parentElement : null,
     
     CustomFixMap: document.getElementById('CustomFixMap') ? 
                   document.getElementById('CustomFixMap').parentElement : null,
@@ -2003,6 +2161,9 @@ const displayCheckboxes = {
     showFixGbkBtn: document.getElementById('showFixGbkBtn'),
     showFixBig5Btn: document.getElementById('showFixBig5Btn'),
     showPasteAppend: document.getElementById('showPasteAppend'),
+    showPasteAppendNoNewline: document.getElementById('showPasteAppendNoNewline'),
+    showAppendOutput: document.getElementById('showAppendOutput'),
+    showAppendOutputNoNewline: document.getElementById('showAppendOutputNoNewline'),
     showCustomFixMap: document.getElementById('showCustomFixMap'),
     showClearInputBtn: document.getElementById('showClearInputBtn'),
     showClearOutputBtn: document.getElementById('showClearOutputBtn'),
@@ -2142,12 +2303,52 @@ document.addEventListener('DOMContentLoaded', function() {
     btnReset.addEventListener('click', () => {
       currentScale = 62.5;
       updateFontSize();
+      showToast(t("fontResetOk"), "success");
     });
   }
 
   // 載入並套用上次儲存的值
   loadSavedScale();
   updateFontSize(false);   // 第一次載入不重複儲存
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  const pasteAppend = document.getElementById('pasteAppend');
+  const pasteAppendNoNewline = document.getElementById('pasteAppendNoNewline');
+  const appendOutput = document.getElementById('appendOutput');
+  const appendOutputNoNewline = document.getElementById('appendOutputNoNewline');
+
+  if (pasteAppend && pasteAppendNoNewline) {
+    if (pasteAppendNoNewline.checked) {
+      pasteAppend.checked = true;
+    }
+    pasteAppend.addEventListener('change', () => {
+      if (!pasteAppend.checked) {
+        pasteAppendNoNewline.checked = false;
+      }
+    });
+    pasteAppendNoNewline.addEventListener('change', () => {
+      if (pasteAppendNoNewline.checked) {
+        pasteAppend.checked = true;
+      }
+    });
+  }
+
+  if (appendOutput && appendOutputNoNewline) {
+    if (appendOutputNoNewline.checked) {
+      appendOutput.checked = true;
+    }
+    appendOutput.addEventListener('change', () => {
+      if (!appendOutput.checked) {
+        appendOutputNoNewline.checked = false;
+      }
+    });
+    appendOutputNoNewline.addEventListener('change', () => {
+      if (appendOutputNoNewline.checked) {
+        appendOutput.checked = true;
+      }
+    });
+  }
 });
 
 </script>

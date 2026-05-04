@@ -29,20 +29,19 @@ window.iconv = iconv
 回到目錄下，執行 npx browserify main.js -o iconv-browser.js  
 這樣就會打包成瀏覽器版本，也就是現在使用的檔案 iconv-browser.js  
 
-繁簡轉換器.html：  
-本人製作於2026.3.12  
-
-GBK_BIG5_UI_20260314.html：  
-本人美化介面，更新於2026.3.14  
+繁簡轉換器初版紀念.html：  
+本人製作           2026.3.12  
   
 GBK_BIG5_UI.html：  
-新增繁體版本的選擇，更新於2026.3.26 - v3.0  
-強化介面操作體驗，最後更新2026.4.8  - v3.1.2  
+嘗試美化介面       2026.3.14  
+新增繁體版本的選擇 2026.3.26 - v3.0  
+強化介面操作體驗   2026.4.8  - v3.1.2  
+微調與整理         2026.5.4  - v3.2  
 
-繁簡轉換器_介面美化_合併單檔.html：  
-把full.js和iconv-browser.js的內容全部塞進GBK_BIG5_UI_20260314.html檔案裡而已  
-跟"GBK_BIG5_UI.html"沒有任何不同的功能，唯一好處是單一檔案就能使用。  
+繁簡轉換器_合併單檔_20260504.html：  
+把full.js和iconv-browser.js的內容全部塞進GBK_BIG5_UI.html檔案裡而已  
+沒有任何不同的功能，唯一好處是單一檔案就能使用。  
 
 ## 可直接使用的線上網頁  
-neocities.org 是免費網站，目前是穩定的，但不保證存活時間  
+neocities.org 是免費網站，目前是穩定的，但不保證長期能用  
 https://artting.neocities.org//tools//GBK_BIG5_UI  

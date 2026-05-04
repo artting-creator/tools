@@ -1,1 +1,5 @@
 ﻿TavernHelper@types/
+temp/
+
+/.vscode/
+/.git/
