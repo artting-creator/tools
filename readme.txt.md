@@ -1,21 +1,23 @@
-# 繁簡轉換器(網頁版)使用方法：  
+# 繁簡轉換器(網頁版)使用方法：
+
 把Browser目錄下的這三個檔案下載到自己電腦裡，用瀏覽器打開"GBK_BIG5_UI.html"即可  
+
 - full.js  
 - iconv-browser.js  
-- GBK_BIG5_UI.html  
+- GBK_BIG5_UI.html
 
+## 以下只是說明檔案來源，可以跳過
 
-## 以下只是說明檔案來源，可以跳過  
 full.js：  
 從專案 OpenCC 下載  
-https://github.com/nk2028/opencc-js/tree/main/src  
+[https://github.com/nk2028/opencc-js/tree/main/src](https://github.com/nk2028/opencc-js/tree/main/src)  
 
 iconv-browser.js：  
 專案 iconv-lite 網址  
-https://github.com/pillarjs/iconv-lite/tree/master  
+[https://github.com/pillarjs/iconv-lite/tree/master](https://github.com/pillarjs/iconv-lite/tree/master)  
 無法直接在網頁上連結使用，因為它是 Node.js 套件。  
 用 bundler 把它打包成單一 JS，才能給瀏覽器用。  
-要用node.js，可從 https://nodejs.org 安裝 LTS 版  
+要用node.js，可從 [https://nodejs.org](https://nodejs.org) 安裝 LTS 版  
 在自己硬碟裡建一個資料夾，例如 iconv-browser  
 進入 iconv-browser 資料夾中  
 執行 npm init -y （建立檔案package.json）  
@@ -31,7 +33,7 @@ window.iconv = iconv
 
 繁簡轉換器初版紀念.html：  
 本人製作           2026.3.12  
-  
+
 GBK_BIG5_UI.html：  
 嘗試美化介面       2026.3.14  
 新增繁體版本的選擇 2026.3.26 - v3.0  
@@ -42,19 +44,21 @@ GBK_BIG5_UI.html：
 把full.js和iconv-browser.js的內容全部塞進GBK_BIG5_UI.html檔案裡而已  
 沒有任何不同的功能，唯一好處是單一檔案就能使用。  
 
-## 可直接使用的線上網頁  
-neocities.org 是免費網站，目前是穩定的，但不保證長期能用  
-https://artting.neocities.org//tools//GBK_BIG5_UI  
+## 可直接使用的線上網頁
 
-## SillyTavern 目錄是給酒館用的  
+neocities.org 是免費網站，目前是穩定的，但不保證長期能用  
+[https://artting.neocities.org//tools//GBK_BIG5_UI](https://artting.neocities.org//tools//GBK_BIG5_UI)  
+
+## SillyTavern 目錄是給酒館用的
+
 目前只有一個酒館助手的腳本 TavernHelperScript  
 
 opencc-js-1.0.5.esm.js：  
 從CDN下載的+esm檔，再照格式取名  
-https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm  
+[https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm](https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm)  
 
 OpenCC.js：  
 腳本連結的檔案  
 
-OpenCCv2.3.json：  
+OpenCCv2.4.json：  
 酒館助手腳本-繁簡轉換器  

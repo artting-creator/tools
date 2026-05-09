@@ -1,4 +1,4 @@
-
+﻿
   console.log("[OpenCC] script start");
 
 $('.opencc-btn').remove();
@@ -16,6 +16,14 @@ const VARIANT_STORAGE_KEY = 'opencc_trad_variant';
 const UI_FONT_SIZE_KEY = 'opencc_ui_font_size_percent';
 const UI_FONT_SIZE_DEFAULT = 65;
 const DEFAULT_VARIANT = 't';  // 官版
+const toast = (type, message, title = '', options = {}) => {
+  const toastOptions = {
+    closeOnHover: false,
+    extendedTimeOut: 200,
+    ...options,
+  };
+  return toastr[type](message, title, toastOptions);
+};
 
   const MENU_ID = 'th-custom-extension-menu-item';
   const MENU_NAME = 'OpenCC';
@@ -328,19 +336,19 @@ eventOn(getButtonEvent(t.INPUT_TRAD), async () => {
   // 清空功能
 eventOn(getButtonEvent(t.INPUT_CLEAR), () => clearInput());
 
-// 👉 保留「最後訊息轉換」兩顆（不合併）
+// 👉 本輪訊息轉換（從最後一個 user 樓層後開始）
 eventOn(getButtonEvent(t.LAST_TRAD), () =>
-  convertLastMessage(getLastMessageId(), 'traditional')
+  convertLatestRoundMessages('traditional')
 );
 
 eventOn(getButtonEvent(t.LAST_SIMP), () =>
-  convertLastMessage(getLastMessageId(), 'simplified')
+  convertLatestRoundMessages('simplified')
 );
 
 // convertInput：去掉 async / await
 const convertInput = (mode) => {
   const input = $('#send_textarea');
-  if (!input.length) return toastr.error('找不到輸入框', '', { timeOut: 1500 });
+  if (!input.length) return toast('error', '找不到輸入框', '', { timeOut: 1500 });
   const val = String(input.val() ?? '');
   if (!val) return;
 
@@ -349,7 +357,7 @@ const convertInput = (mode) => {
     .trigger('input')
     .trigger('focus');
 
-  toastr.success(
+  toast('success', 
     mode === 'traditional' ? '已轉成繁體' : '已转成简体',
     '',
     { timeOut: 1100 }
@@ -362,7 +370,7 @@ let clearTimer = null;
 const clearInput = () => {
   const input = $('#send_textarea');
   if (!input.length) {
-    return toastr.error('找不到輸入框', '', { timeOut: 1500 });
+    return toast('error', '找不到輸入框', '', { timeOut: 1500 });
   }
 
   const val = String(input.val() ?? '');
@@ -372,7 +380,7 @@ const clearInput = () => {
   if (!clearConfirm) {
     clearConfirm = true;
 flashDanger();
-    toastr.warning('再點一次「清空」即可清除', '', {
+    toast('warning', '再點一次「清空」即可清除', '', {
       timeOut: 1500
     });
 
@@ -390,7 +398,7 @@ flashDanger();
 
   input.val('').trigger('input').trigger('focus');
 
-  toastr.success('已清空輸入', '', { timeOut: 1100 });
+  toast('success', '已清空輸入', '', { timeOut: 1100 });
 };
 
 const flashDanger = () => {
@@ -416,47 +424,72 @@ const flashDanger = () => {
 
 
 
-const convertLastMessage = async (msgId, mode) => {
-  const msgs = getChatMessages(msgId);
-  if (!msgs?.[0]) return;
-  const msg = String(msgs[0].message ?? '');
-  if (!msg) return;
+const convertLatestRoundMessages = async (mode) => {
+  const lastMessageId = getLastMessageId();
+  if (lastMessageId < 0) return;
 
-  let newMsg = convert(msg, mode);
+  const allMsgs = getChatMessages(`0-${lastMessageId}`);
+  if (!allMsgs?.length) return;
 
-  // ── 處理多個自訂標籤 ──
+  let lastUserMessageId = -1;
+  for (let i = allMsgs.length - 1; i >= 0; i--) {
+    if (allMsgs[i].role === 'user') {
+      lastUserMessageId = allMsgs[i].message_id;
+      break;
+    }
+  }
+
+  const roundMsgs = allMsgs.filter((item) =>
+    item.message_id > lastUserMessageId &&
+    item.role !== 'user' &&
+    String(item.message ?? '').trim()
+  );
+
+  if (!roundMsgs.length) {
+    toast('info', '本輪沒有可轉換內容', '', { timeOut: 1000 });
+    return;
+  }
+
   const tagMode = getState('tag-trad') ? 'traditional' :
                   getState('tag-simp') ? 'simplified' : null;
+  const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
+  const tagConfigs = parseCustomTags(tagInput);
+  const shouldConvertTags = tagMode && tagConfigs.length > 0;
 
-  if (tagMode) {
-    const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
-    const tagConfigs = parseCustomTags(tagInput);
-    if (tagConfigs.length > 0) {
+  const updates = [];
+  for (const item of roundMsgs) {
+    const originalMsg = String(item.message ?? '');
+    let newMsg = convert(originalMsg, mode);
+
+    if (shouldConvertTags) {
       newMsg = await convertCustomTags(newMsg, tagMode, tagConfigs);
     }
-  }
-  // ──────────────────────────────────────
 
-  if (newMsg !== msg) {
-    await setChatMessages(
-      [{ message_id: msgId, message: newMsg }],
-      { refresh: 'affected' }
-    );
-
-    let toastText = mode === 'traditional' ? '本樓已轉繁體' : '本楼已转简体';
-
-    // toast 顯示標籤數量（可選）
-    const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
-    const tagConfigs = parseCustomTags(tagInput);
-    const tagCount = tagConfigs.length;
-    if (tagMode && tagCount > 0) {
-      toastText += `（含 ${tagCount} 個標籤）`;
-    } else if (tagMode) {
-      toastText += '（標籤無效）';
+    if (newMsg !== originalMsg) {
+      updates.push({ message_id: item.message_id, message: newMsg });
     }
-
-    toastr.success(toastText, '', { timeOut: 1100 });
   }
+
+  if (!updates.length) {
+    toast('info', '本輪訊息無需轉換', '', { timeOut: 1000 });
+    return;
+  }
+
+  await setChatMessages(updates, { refresh: 'affected' });
+
+  let toastText = mode === 'traditional'
+    ? `本輪已轉繁體（${updates.length} 樓）`
+    : `本轮已转简体（${updates.length} 楼）`;
+
+  if (tagMode && tagConfigs.length > 0) {
+    toastText += mode === 'traditional'
+      ? `（含 ${tagConfigs.length} 個標籤）`
+      : `（含 ${tagConfigs.length} 个标签）`;
+  } else if (tagMode) {
+    toastText += mode === 'traditional' ? '（標籤無效）' : '（标签无效）';
+  }
+
+  toast('success', toastText, '', { timeOut: 1200 });
 };
 
 /* =========================
@@ -771,7 +804,7 @@ bindHelpToggle(helpBlocks.eq(1));
 
         saveSetting();
         toggleButtonsVisibility();
-        toastr.success(`${item.name}：${checked ? 'ON' : 'OFF'}`, '', {timeOut:1100});
+        toast('success', `${item.name}：${checked ? 'ON' : 'OFF'}`, '', {timeOut:1100});
       });
     });
 
@@ -807,7 +840,11 @@ const variantSelect = popup.find('#trad-variant');
     });
     fontResetBtn.on('click', () => {
       applyPopupFontSize(UI_FONT_SIZE_DEFAULT);
-      toastr.success('已恢復預設大小', '', { timeOut: 1000 });
+      toast('success', '已恢復預設大小', '', {
+        timeOut: 1000,
+        extendedTimeOut: 200,
+        closeOnHover: false
+      });
     });
 
     const renderSavedTagList = () => {
@@ -842,8 +879,8 @@ const variantSelect = popup.find('#trad-variant');
           tagInput.val(value);
           localStorage.setItem(TAG_STORAGE_KEY, value);
           tagInput.trigger('focus');
-          if (changed) toastr.success('已附加保存標籤', '', { timeOut: 1000 });
-          else toastr.info('標籤已存在，不重複附加', '', { timeOut: 1000 });
+          if (changed) toast('success', '已附加保存標籤', '', { timeOut: 1000 });
+          else toast('info', '標籤已存在，不重複附加', '', { timeOut: 1000 });
         });
 
         row.find('.saved-tag-note').on('change', function() {
@@ -859,7 +896,7 @@ const variantSelect = popup.find('#trad-variant');
           const nextList = loadSavedTagList().filter((_, idx) => idx !== i);
           saveTagList(nextList);
           renderSavedTagList();
-          toastr.success('已刪除保存標籤', '', { timeOut: 900 });
+          toast('success', '已刪除保存標籤', '', { timeOut: 900 });
         });
 
         savedTagList.append(row);
@@ -870,13 +907,10 @@ const variantSelect = popup.find('#trad-variant');
     presetSelect.on('change', function() {
       const val = this.value;
       if (!val) return;
-      const { changed, value } = appendUniqueTag(tagInput.val(), val);
-      tagInput.val(value);
-      tagInput.trigger('focus');   // 新增
-      localStorage.setItem(TAG_STORAGE_KEY, value);
-      if (!changed) {
-        toastr.info('範例標籤已存在，不重複附加', '', { timeOut: 1000 });
-      }
+      tagInput.val(val);
+      tagInput.trigger('focus');
+      localStorage.setItem(TAG_STORAGE_KEY, val);
+      toast('success', '已套用範例標籤', '', { timeOut: 1000 });
       this.value = '';
     });
 
@@ -890,22 +924,22 @@ const variantSelect = popup.find('#trad-variant');
       renderSavedTagList();
 
       if (!savedTag) {
-        toastr.info('請先輸入標籤內容', '', { timeOut: 900 });
+        toast('info', '請先輸入標籤內容', '', { timeOut: 900 });
         return;
       }
       if (savedTag.status === 'exists') {
-        toastr.info('標籤已存在，保存已生效', '', { timeOut: 1000 });
+        toast('info', '標籤已存在，保存已生效', '', { timeOut: 1000 });
         return;
       }
 
-      toastr.success('標籤已保存', '', { timeOut: 1000 });
+      toast('success', '標籤已保存', '', { timeOut: 1000 });
     });
 
     clearTagBtn.on('click', function() {
       tagInput.val('');
       localStorage.setItem(TAG_STORAGE_KEY, '');
       tagInput.trigger('focus');
-      toastr.success('已清空標籤輸入', '', { timeOut: 900 });
+      toast('success', '已清空標籤輸入', '', { timeOut: 900 });
     });
 
     exportTagListBtn.on('click', function() {
@@ -920,7 +954,7 @@ const variantSelect = popup.find('#trad-variant');
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toastr.success('已導出標籤列表', '', { timeOut: 1000 });
+      toast('success', '已導出標籤列表', '', { timeOut: 1000 });
     });
 
     importTagListBtn.on('click', function() {
@@ -937,10 +971,10 @@ const variantSelect = popup.find('#trad-variant');
         const nextList = parseSavedTagListText(String(reader.result ?? ''));
         saveTagList(nextList);
         renderSavedTagList();
-        toastr.success(`已導入 ${nextList.length} 筆標籤`, '', { timeOut: 1000 });
+        toast('success', `已導入 ${nextList.length} 筆標籤`, '', { timeOut: 1000 });
       };
       reader.onerror = () => {
-        toastr.error('導入失敗，請確認檔案格式', '', { timeOut: 1200 });
+        toast('error', '導入失敗，請確認檔案格式', '', { timeOut: 1200 });
       };
       reader.readAsText(file, 'utf-8');
     });
@@ -955,7 +989,7 @@ if (val === 'tw') labelt = '台版繁體';
 else if (val === 'hk') labelt = '港版繁體';
 else if (val === 'twp') labelt = '台版繁體+詞語轉換';
 
-toastr.success(`已切換為 ${labelt}`, '', { timeOut: 1100 });
+toast('success', `已切換為 ${labelt}`, '', { timeOut: 1100 });
 
   console.log('variant:', val);
   console.log('convTradTWP:', convTradTWP);
@@ -1058,11 +1092,26 @@ setTimeout(() => {
   /* =========================
       自動轉換回覆（包含自訂 tag）
   ========================== */
-eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
-  if (msgId !== getLastMessageId()) return;
+const autoConvertReplyMessageById = async (msgId) => {
+  const allMsgs = getChatMessages(`0-${getLastMessageId()}`);
+  if (!allMsgs?.length) return;
+
+  let lastUserMessageId = -1;
+  for (let i = allMsgs.length - 1; i >= 0; i--) {
+    if (allMsgs[i].role === 'user') {
+      lastUserMessageId = allMsgs[i].message_id;
+      break;
+    }
+  }
+
+  // 只處理最後一個 user 之後的樓層，避免舊樓層被其他正則/插件更新時再次轉換
+  if (msgId <= lastUserMessageId) return;
 
   const msgs = getChatMessages(msgId);
   if (!msgs?.[0]) return;
+  const role = String(msgs[0].role || '');
+  if (role === 'user') return;
+
   let msg = String(msgs[0].message || '');
   if (!msg) return;
 
@@ -1113,9 +1162,18 @@ eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
     }
 
     if (toastText) {
-      toastr.success(toastText, '', { timeOut: 1100 });
+      toast('success', toastText, '', { timeOut: 1100 });
     }
   }
+};
+
+eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
+  await autoConvertReplyMessageById(msgId);
+});
+
+eventOn(tavern_events.MESSAGE_UPDATED, async (msgId) => {
+  await autoConvertReplyMessageById(msgId);
 });
 
   console.log('[OpenCC] 腳本完成初始化');
+
