@@ -589,14 +589,33 @@ if (!document.getElementById('opencc-mobile-style')) {
   `;
   document.head.appendChild(style);
 }
+    const normalizeUIFontSizePercent = (value) => {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric) || numeric <= 0) return UI_FONT_SIZE_DEFAULT;
+      return Math.max(40, Math.min(120, numeric));
+    };
     const getUIFontSizePercent = () => {
-      const saved = Number(localStorage.getItem(UI_FONT_SIZE_KEY));
-      return Number.isFinite(saved) ? saved : UI_FONT_SIZE_DEFAULT;
+      const raw = localStorage.getItem(UI_FONT_SIZE_KEY);
+      const normalized = normalizeUIFontSizePercent(raw);
+      if (String(raw ?? '') !== String(normalized)) {
+        localStorage.setItem(UI_FONT_SIZE_KEY, String(normalized));
+      }
+      return normalized;
     };
     const setUIFontSizePercent = (nextPercent) => {
-      const normalized = Math.max(40, Math.min(120, Number(nextPercent) || UI_FONT_SIZE_DEFAULT));
+      const normalized = normalizeUIFontSizePercent(nextPercent);
       localStorage.setItem(UI_FONT_SIZE_KEY, String(normalized));
       return normalized;
+    };
+    const fs = (size) => `calc(${size} * var(--opencc-font-scale, 0.65))`;
+    const ui = {
+      checkboxLabel: `margin:0; cursor:pointer; color:#eee; line-height:1.2; font-size:${fs('1.8rem')}; flex:1;`,
+      select: `width:100%; padding:10px; font-size:${fs('1.8rem')}; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;`,
+      input: `flex:1; padding:10px; font-size:${fs('1.8rem')}; background:#1e1e1e; color:#eee; border:1px solid #555; border-radius:6px; font-family:monospace;`,
+      smallBtn: `white-space:nowrap; min-width:56px; height:34px; padding:0 8px; font-size:${fs('1.5rem')}; line-height:1;`,
+      smallBtnFixed: `white-space:nowrap; width:56px; height:34px; padding:0; font-size:${fs('1.5rem')};`,
+      helpText: `margin-top:6px; font-size:${fs('1.6rem')}; color:#aaa; line-height:1.4;`,
+      summary: `cursor:pointer; color:#ddd; font-size:${fs('1.8rem')}; list-style:none;`,
     };
     const checkboxes = settings.map(item => `
  <div style="
@@ -614,14 +633,7 @@ flex-shrink:0;
 accent-color:#f44336;
 cursor:pointer;
 ">
-<label for="${item.id}" style="
-  margin:0;
-  cursor:pointer;
-  color:#eee;
-  line-height:1.2; /* 行距 */
-  font-size:calc(1.8rem * var(--opencc-font-scale, 0.65)); /* 字體 */
-  flex:1;
-">
+<label for="${item.id}" style="${ui.checkboxLabel}">
           ${item.name}
         </label>
       </div>
@@ -629,13 +641,13 @@ cursor:pointer;
 
 const variantSection = `
   <div style="margin-top: 24px;">
-    <select id="trad-variant" style="width:100%; padding:10px; font-size:calc(1.8rem * var(--opencc-font-scale, 0.65)); background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
+    <select id="trad-variant" style="${ui.select}">
       <option value="t" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 't' || !localStorage.getItem(VARIANT_STORAGE_KEY) ? 'selected' : ''}>官版繁體 (t)</option>
       <option value="tw" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'tw' ? 'selected' : ''}>台版繁體 (tw)</option>
       <option value="hk" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'hk' ? 'selected' : ''}>港版繁體 (hk)</option>
       <option value="twp" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'twp' ? 'selected' : ''}>台版繁體+詞語转换 (twp)</option>
     </select>
-    <div class="tag-help" style="margin-top:6px; font-size:calc(1.6rem * var(--opencc-font-scale, 0.65)); color:#aaa; line-height:1.4;">
+    <div class="tag-help" style="${ui.helpText}">
       <div class="trad-text">
         繁體版本影響：輸入框、本樓、自動回覆、標籤內容的所有繁體轉換
       </div>
@@ -650,7 +662,7 @@ const variantSection = `
     const customTagValue = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
 
 const tagSection = `
-  <div style="margin-top: 24px;">    <select id="tag-preset" style="width:100%; padding:8px; font-size:calc(1.8rem * var(--opencc-font-scale, 0.65)); margin-bottom:8px; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;">
+  <div style="margin-top: 24px;">    <select id="tag-preset" style="${ui.select} margin-bottom:8px; padding:8px;">
       <option value="" selected disabled>標籤設定範例</option>
       <option value="[IMG]">例一：[tag][/tag]成對中括號</option>
       <option value="<action>">例二：&lt;tag&gt;&lt;/tag&gt;成對尖括號</option>
@@ -660,33 +672,24 @@ const tagSection = `
     <div style="display:flex; gap:8px; align-items:center;">
       <input type="text" id="custom-tag-input" value="${customTagValue}"
              placeholder="[tag] 或 <tag> 或 prefix|suffix"
-style="
-  flex:1;
-  padding:10px;
-  font-size:calc(1.8rem * var(--opencc-font-scale, 0.65));
-  background:#1e1e1e;
-  color:#eee;
-  border:1px solid #555;
-  border-radius:6px;
-  font-family:monospace;
-">
-      <button type="button" id="save-custom-tag-btn" class="menu_button" style="white-space:nowrap; width:56px; height:34px; padding:0; font-size:calc(1.5rem * var(--opencc-font-scale, 0.65));">保存</button>
-      <button type="button" id="clear-custom-tag-btn" class="menu_button" style="white-space:nowrap; width:56px; height:34px; padding:0; font-size:calc(1.5rem * var(--opencc-font-scale, 0.65));">清除</button>
+style="${ui.input}">
+      <button type="button" id="save-custom-tag-btn" class="menu_button" style="${ui.smallBtnFixed}">保存</button>
+      <button type="button" id="clear-custom-tag-btn" class="menu_button" style="${ui.smallBtnFixed}">清除</button>
     </div>
     <details id="saved-tag-list-wrap" style="margin-top:8px; border:1px solid #555; border-radius:6px; padding:8px; background:#1f1f20;">
-      <summary style="cursor:pointer; color:#ddd; font-size:calc(1.8rem * var(--opencc-font-scale, 0.65)); list-style:none;">
+      <summary style="${ui.summary}">
         <span style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
           <span>自訂標籤列表</span>
           <span style="display:flex; align-items:center; gap:6px;">
-            <button type="button" id="import-tag-list-btn" class="menu_button" style="white-space:nowrap; min-width:56px; height:34px; padding:0 8px; font-size:calc(1.5rem * var(--opencc-font-scale, 0.65)); line-height:1;">導入</button>
-            <button type="button" id="export-tag-list-btn" class="menu_button" style="white-space:nowrap; min-width:56px; height:34px; padding:0 8px; font-size:calc(1.5rem * var(--opencc-font-scale, 0.65)); line-height:1;">導出</button>
+            <button type="button" id="import-tag-list-btn" class="menu_button" style="${ui.smallBtn}">導入</button>
+            <button type="button" id="export-tag-list-btn" class="menu_button" style="${ui.smallBtn}">導出</button>
           </span>
         </span>
       </summary>
       <input type="file" id="import-tag-list-file" accept=".txt,text/plain" style="display:none;">
       <div id="saved-tag-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
     </details>
-<div class="tag-help" style="margin-top:6px; font-size:calc(1.6rem * var(--opencc-font-scale, 0.65)); color:#aaa; line-height:1.4;">
+<div class="tag-help" style="${ui.helpText}">
   <div class="trad-text">
     • 標籤設定可參考範例<br>
     • 勾選標籤內容轉為繁/簡體，標籤才有效<br>
@@ -734,11 +737,11 @@ overflow-y:auto;
   --opencc-font-scale:${getUIFontSizePercent() / 100};
 ">
         <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 20px; gap:8px;">
-          <h3 style="margin:0; font-size:calc(2.6rem * var(--opencc-font-scale, 0.65)); text-align:left; color:#eee;">Setting</h3>
+          <h3 style="margin:0; font-size:${fs('2.6rem')}; text-align:left; color:#eee;">Setting</h3>
           <div style="display:flex; align-items:center; gap:6px;">
-            <button type="button" id="opencc-font-dec" class="menu_button" style="margin:0; min-width:32px; height:32px; padding:0 8px; font-size:calc(1.6rem * var(--opencc-font-scale, 0.65)); line-height:1;">-</button>
-            <button type="button" id="opencc-font-reset" class="menu_button" style="margin:0; min-width:64px; height:32px; padding:0 10px; font-size:calc(1.4rem * var(--opencc-font-scale, 0.65)); line-height:1; white-space:nowrap;">字体</button>
-            <button type="button" id="opencc-font-inc" class="menu_button" style="margin:0; min-width:32px; height:32px; padding:0 8px; font-size:calc(1.6rem * var(--opencc-font-scale, 0.65)); line-height:1;">+</button>
+            <button type="button" id="opencc-font-dec" class="menu_button" style="margin:0; min-width:32px; height:32px; padding:0 8px; font-size:${fs('1.6rem')}; line-height:1;">-</button>
+            <button type="button" id="opencc-font-reset" class="menu_button" style="margin:0; min-width:64px; height:32px; padding:0 10px; font-size:${fs('1.4rem')}; line-height:1; white-space:nowrap;">字体</button>
+            <button type="button" id="opencc-font-inc" class="menu_button" style="margin:0; min-width:32px; height:32px; padding:0 8px; font-size:${fs('1.6rem')}; line-height:1;">+</button>
           </div>
         </div>
         ${checkboxes}
@@ -746,7 +749,7 @@ overflow-y:auto;
 		${variantSection}
         <button type="button" class="menu_button th-custom-popup-close" style="
           margin-top:24px; width:100%; padding:12px; background:#f44336; color:white;
-          border:none; border-radius:6px; cursor:pointer; font-size:calc(2.1rem * var(--opencc-font-scale, 0.65)); transition: background 0.2s;">
+          border:none; border-radius:6px; cursor:pointer; font-size:${fs('2.1rem')}; transition: background 0.2s;">
           Close
         </button>
       </div>
