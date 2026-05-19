@@ -1,5 +1,7 @@
-﻿
-  console.log("[OpenCC] script start");
+﻿  console.log("[OpenCC] script start");
+  const opencc_local_file = '/opencc-js-1.0.5.esm.js';
+  // 模組的路徑包含檔名，路徑從本地酒館根目錄開始。例如模組若在C:\AI\SillyTavern\public\localfile\opencc，就設為'/localfile/opencc/opencc-js-1.0.5.esm.js'
+  // 若設為空或註解掉或找不到本地檔，會自動從網路抓
 
 $('.opencc-btn').remove();
   const STORAGE_KEY = 'opencc_auto_mode';
@@ -28,7 +30,6 @@ const toast = (type, message, title = '', options = {}) => {
   const MENU_ID = 'th-custom-extension-menu-item';
   const MENU_NAME = 'OpenCC';
 
-
 // 頂層變數：三個 converter
 let convTradT = null;   // 官版 t
 let convTradTW = null;  // 台版 tw
@@ -36,10 +37,11 @@ let convTradHK = null;  // 港版 hk
 let convSimp = null;
 let convTradTWP = null; // 台版詞語轉繁
 let convTWPToSimp = null; // 台版詞語轉簡
+let openccManualConverting = false; // 手動本樓轉換期間，暫停自動轉換事件
 
 // OpenCC 模組載入：本地優先，CDN 備援
 const loadOpenCCModule = async () => {
-  const localSource = '/opencc-js-1.0.5.esm.js';
+  const localSource = String((typeof opencc_local_file !== 'undefined' ? opencc_local_file : '') || '').trim();
   const remoteSources = [
     'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm',
     'https://testingcf.jsdelivr.net/npm/opencc-js@1.0.5/+esm',
@@ -48,18 +50,25 @@ const loadOpenCCModule = async () => {
   let lastErr = null;
 
   // 先探測本地檔是否存在且回傳 JS MIME，避免缺檔時瀏覽器噴出 module MIME 錯誤
-  try {
-    const probe = await fetch(localSource, { method: 'GET', cache: 'no-store' });
-    const ct = String(probe.headers.get('content-type') || '').toLowerCase();
-    const okMime = ct.includes('javascript') || ct.includes('ecmascript') || ct.includes('text/plain');
-    if (probe.ok && okMime) {
-      const mod = await import(localSource);
-      console.info('[OpenCC] module loaded from:', localSource);
-      return mod;
+  if (localSource) {
+    try {
+      const probe = await fetch(localSource, { method: 'GET', cache: 'no-store' });
+      const ct = String(probe.headers.get('content-type') || '').toLowerCase();
+      const okMime = ct.includes('javascript') || ct.includes('ecmascript') || ct.includes('text/plain');
+      if (probe.ok && okMime) {
+        const mod = await import(localSource);
+        console.info('[OpenCC] module loaded from:', localSource);
+        return mod;
+      }
+    } catch (err) {
+      // local probe failed; fallback to CDN
     }
-    console.info('[OpenCC] local module skipped:', localSource, 'status=', probe.status, 'content-type=', ct || 'unknown');
-  } catch (err) {
-    console.info('[OpenCC] local module unavailable, fallback to CDN:', err?.message || err);
+  }
+
+  if (localSource) {
+    console.info('[OpenCC] local module not found, fallback to CDN');
+  } else {
+    console.info('[OpenCC] local module disabled, fallback to CDN');
   }
 
   for (const url of remoteSources) {
@@ -421,10 +430,71 @@ const flashDanger = () => {
   }, 1500);
 };
 
+const convertDisplayedRoundMessageDOM = (roundMsgs, mode) => {
+  const convertTextNodesInRoot = (root) => {
+    if (!root) return false;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    let changed = false;
+
+    while (node) {
+      const src = String(node.nodeValue ?? '');
+      if (src.trim()) {
+        const dst = convert(src, mode);
+        if (dst !== src) {
+          node.nodeValue = dst;
+          changed = true;
+        }
+      }
+      node = walker.nextNode();
+    }
+    return changed;
+  };
+
+  const convertIframeTree = (rootEl) => {
+    if (!rootEl) return false;
+    let changed = false;
+
+    const iframes = Array.from(rootEl.querySelectorAll('iframe'));
+    iframes.forEach((frame) => {
+      try {
+        const doc = frame.contentDocument || frame.contentWindow?.document;
+        if (!doc) return;
+        if (convertTextNodesInRoot(doc.body || doc.documentElement)) {
+          changed = true;
+        }
+      } catch (err) {
+        // cross-origin iframe cannot be accessed
+      }
+    });
+
+    return changed;
+  };
+  let changedRows = 0;
+  const ids = Array.from(new Set((roundMsgs || []).map(item => Number(item.message_id)).filter(Number.isFinite)));
+  if (!ids.length) return 0;
+
+  ids.forEach((messageId) => {
+    const $display = retrieveDisplayedMessage(messageId);
+    if (!$display?.length) return;
+
+    const root = $display.get(0);
+    if (!root) return;
+
+    const changedInMain = convertTextNodesInRoot(root);
+    const changedInIframe = convertIframeTree(root);
+    if (changedInMain || changedInIframe) changedRows += 1;
+  });
+
+  return changedRows;
+};
+
 
 
 
 const convertLatestRoundMessages = async (mode) => {
+  openccManualConverting = true;
+  try {
   const lastMessageId = getLastMessageId();
   if (lastMessageId < 0) return;
 
@@ -454,32 +524,38 @@ const convertLatestRoundMessages = async (mode) => {
                   getState('tag-simp') ? 'simplified' : null;
   const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
   const tagConfigs = parseCustomTags(tagInput);
-  const shouldConvertTags = tagMode && tagConfigs.length > 0;
 
+  // 先做資料層轉換（補回標籤功能）
   const updates = [];
   for (const item of roundMsgs) {
-    const originalMsg = String(item.message ?? '');
-    let newMsg = convert(originalMsg, mode);
+    const original = String(item.message ?? '');
+    if (!original) continue;
 
-    if (shouldConvertTags) {
-      newMsg = await convertCustomTags(newMsg, tagMode, tagConfigs);
-    }
+    // 資料層只處理標籤內文；整體繁簡交給顯示層
+    let converted = original;
+    if (tagMode && tagConfigs.length > 0) converted = await convertCustomTags(converted, tagMode, tagConfigs);
 
-    if (newMsg !== originalMsg) {
-      updates.push({ message_id: item.message_id, message: newMsg });
+    if (converted !== original) {
+      updates.push({ message_id: item.message_id, message: converted });
     }
   }
 
-  if (!updates.length) {
+  if (updates.length) {
+    await setChatMessages(updates, { refresh: 'affected' });
+  }
+
+  // 等待本輪樓層完成重繪後，再對整輪顯示層補轉，避免只命中最後一樓
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const domChangedCount = convertDisplayedRoundMessageDOM(roundMsgs, mode);
+
+  if (!domChangedCount) {
     toast('info', '本輪訊息無需轉換', '', { timeOut: 1000 });
     return;
   }
 
-  await setChatMessages(updates, { refresh: 'affected' });
-
   let toastText = mode === 'traditional'
-    ? `本輪已轉繁體（${updates.length} 樓）`
-    : `本轮已转简体（${updates.length} 楼）`;
+    ? `本輪已轉繁體（畫面更新 ${domChangedCount} 樓）`
+    : `本轮已转简体（画面更新 ${domChangedCount} 楼）`;
 
   if (tagMode && tagConfigs.length > 0) {
     toastText += mode === 'traditional'
@@ -490,6 +566,10 @@ const convertLatestRoundMessages = async (mode) => {
   }
 
   toast('success', toastText, '', { timeOut: 1200 });
+  } finally {
+    // 給渲染事件一點時間，避免手動轉換後立刻被自動模式覆蓋
+    setTimeout(() => { openccManualConverting = false; }, 800);
+  }
 };
 
 /* =========================
@@ -1024,158 +1104,58 @@ const btn = $(`
   new MutationObserver(injectMenu).observe(document.body, {childList:true, subtree:true});
 
 
-// 建立觀察器
-const observer = new IntersectionObserver((entries) => {
-  const allMsgs = getChatMessages();
-
-  entries.forEach(entry => {
-    if (!entry.isIntersecting) return;
-
-    const el = entry.target;
-
-    if (el.dataset.converted === 'true') return;
-
-    const elements = Array.from(document.querySelectorAll('.mes'))
-      .filter(e => !e.closest('#message_template'));
-
-    const index = elements.indexOf(el);
-    if (index === -1) return;
-
-    const msgObj = allMsgs[index];
-    if (!msgObj) return;
-
-    let msg = String(msgObj.message || '');
-    if (!msg) return;
-
-    let newMsg = msg;
-
-    // 👉 你的轉換
-    const receiveMode = getState('auto-trad') ? 'traditional' :
-                        getState('auto-simp') ? 'simplified' : null;
-
-    if (receiveMode) {
-      newMsg = convert(newMsg, receiveMode);
-    }
-
-    if (newMsg !== msg) {
-      setChatMessages(
-        [{ message_id: msgObj.message_id, message: newMsg }],
-        { refresh: 'affected' }
-      );
-    }
-
-    el.dataset.converted = 'true';
-  });
-}, {
-  root: null,
-  threshold: 0,
-  rootMargin: '300px'
-});
-
-// Observe綁定
-window.observeAllMessages = function () {
-  const elements = Array.from(document.querySelectorAll('.mes'))
-    .filter(el => !el.closest('#message_template'));
-
-  console.log('valid:', elements.length);
-
-  elements.forEach(el => {
-    if (!el.dataset.observing) {
-      observer.observe(el);
-      el.dataset.observing = 'true';
-    }
-  });
-};
-
-setTimeout(() => {
-  console.log('manual run');
-  observeAllMessages();
-}, 2000);
+// （已停用）舊版 IntersectionObserver 自動轉換，避免干擾目前顯示層/資料層流程
 
   /* =========================
-      自動轉換回覆（包含自訂 tag）
+      自動轉換回覆（顯示層）
   ========================== */
-const autoConvertReplyMessageById = async (msgId) => {
-  const allMsgs = getChatMessages(`0-${getLastMessageId()}`);
-  if (!allMsgs?.length) return;
-
-  let lastUserMessageId = -1;
-  for (let i = allMsgs.length - 1; i >= 0; i--) {
-    if (allMsgs[i].role === 'user') {
-      lastUserMessageId = allMsgs[i].message_id;
-      break;
-    }
-  }
-
-  // 只處理最後一個 user 之後的樓層，避免舊樓層被其他正則/插件更新時再次轉換
-  if (msgId <= lastUserMessageId) return;
-
-  const msgs = getChatMessages(msgId);
-  if (!msgs?.[0]) return;
-  const role = String(msgs[0].role || '');
-  if (role === 'user') return;
-
-  let msg = String(msgs[0].message || '');
-  if (!msg) return;
-
-  let newMsg = msg;
-
-  // Step 1: receive 模式（整則訊息轉換）
+const autoConvertDisplayedById = async (msgId) => {
+  if (openccManualConverting) return;
+  await ensureConverter();
   const receiveMode = getState('auto-trad') ? 'traditional' :
                       getState('auto-simp') ? 'simplified' : null;
-  if (receiveMode) {
-    newMsg = convert(newMsg, receiveMode);
-  }
+  if (!receiveMode) return;
 
-  // Step 2: 標籤模式（多個標籤內容轉換）
-  const tagMode = getState('tag-trad') ? 'traditional' :
-                  getState('tag-simp') ? 'simplified' : null;
-  if (tagMode) {
-    const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
-    const tagConfigs = parseCustomTags(tagInput);
-    if (tagConfigs.length > 0) {
-      newMsg = await convertCustomTags(newMsg, tagMode, tagConfigs);
+  const msgs = getChatMessages(msgId);
+  const msg0 = msgs?.[0];
+  if (!msg0) return;
+  if (String(msg0.role || '') === 'user') return;
+
+  // 先做資料層（只轉標籤內文）
+  if (msg0) {
+    const original = String(msg0.message || '');
+    if (original) {
+      const tagMode = getState('tag-trad') ? 'traditional' :
+                      getState('tag-simp') ? 'simplified' : null;
+      let converted = original;
+      if (tagMode) {
+        const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
+        const tagConfigs = parseCustomTags(tagInput);
+        if (tagConfigs.length > 0) {
+          converted = await convertCustomTags(converted, tagMode, tagConfigs);
+        }
+      }
+      if (converted !== original) {
+        await setChatMessages(
+          [{ message_id: msgId, message: converted }],
+          { refresh: 'affected' }
+        );
+      }
     }
   }
 
-  // 如果有變化才更新
-  if (newMsg !== msg) {
-    await setChatMessages(
-      [{ message_id: msgId, message: newMsg }],
-      { refresh: 'affected' }
-    );
-
-    let toastText = '';
-    const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
-    const tagConfigs = parseCustomTags(tagInput);
-    const tagCount = tagConfigs.length;
-
-    if (receiveMode && tagMode && tagCount > 0) {
-      toastText = receiveMode === 'traditional'
-        ? `已轉為繁體（含 ${tagCount} 個標籤）`
-        : `已转为简体（含 ${tagCount} 个标签）`;
-    } else if (receiveMode) {
-      toastText = receiveMode === 'traditional'
-        ? '已轉為繁體'
-        : '已转为简体';
-    } else if (tagMode && tagCount > 0) {
-      toastText = tagMode === 'traditional'
-        ? `${tagCount} 個標籤內容已轉為繁體`
-        : `${tagCount} 个标签内容已转为简体`;
-    }
-
-    if (toastText) {
-      toast('success', toastText, '', { timeOut: 1100 });
-    }
-  }
+  // 再做顯示層轉換
+  setTimeout(() => convertDisplayedRoundMessageDOM([{ message_id: msgId }], receiveMode), 0);
+  setTimeout(() => convertDisplayedRoundMessageDOM([{ message_id: msgId }], receiveMode), 200);
 };
 
-eventOn(tavern_events.MESSAGE_RECEIVED, async (msgId) => {
-  await autoConvertReplyMessageById(msgId);
+eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, (msgId) => {
+  autoConvertDisplayedById(msgId).catch(() => {});
 });
 
-eventOn(tavern_events.MESSAGE_UPDATED, async (msgId) => {
-  await autoConvertReplyMessageById(msgId);
+// 兼容其他腳本改寫訊息內容後的重渲染（例如 applyImagePromptInsertions）
+eventOn(tavern_events.MESSAGE_UPDATED, (msgId) => {
+  autoConvertDisplayedById(msgId).catch(() => {});
 });
 
   console.log('[OpenCC] 腳本完成初始化');

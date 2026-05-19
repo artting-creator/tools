@@ -57,8 +57,8 @@ opencc-js-1.0.5.esm.js：
 從CDN下載的+esm檔，再照格式取名  
 [https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm](https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/+esm)  
 
-OpenCC.js：    
+OpenCC.js：  
 腳本連結的檔案  
 
-OpenCCv2.4.1.json：    
+OpenCCv2.5.json：  
 酒館助手腳本-繁簡轉換器  
