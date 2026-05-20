@@ -1144,18 +1144,57 @@ const autoConvertDisplayedById = async (msgId) => {
     }
   }
 
-  // 再做顯示層轉換
-  setTimeout(() => convertDisplayedRoundMessageDOM([{ message_id: msgId }], receiveMode), 0);
-  setTimeout(() => convertDisplayedRoundMessageDOM([{ message_id: msgId }], receiveMode), 200);
+  // 對齊按鈕流程：資料層標籤轉換後，延遲 300ms 再做一次顯示層轉換
+  await new Promise(resolve => setTimeout(resolve, 300));
+  convertDisplayedRoundMessageDOM([{ message_id: msgId }], receiveMode);
+};
+
+// 避免同一樓層在短時間內被多個事件重複觸發轉換
+const OPENCC_AUTO_CONVERT_DEDUPE_MS = 500;
+const openccAutoConvertRecent = new Map();
+const openccAutoConvertPending = new Map();
+const triggerAutoConvertByEvent = (msgId) => {
+  if (openccManualConverting) return;
+  const id = Number(msgId);
+  if (!Number.isFinite(id) || id < 0) return;
+
+  const now = Date.now();
+  const lastAt = openccAutoConvertRecent.get(id) || 0;
+  const elapsed = now - lastAt;
+  if (elapsed < OPENCC_AUTO_CONVERT_DEDUPE_MS) {
+    if (!openccAutoConvertPending.has(id)) {
+      const waitMs = OPENCC_AUTO_CONVERT_DEDUPE_MS - elapsed;
+      const timer = setTimeout(() => {
+        openccAutoConvertPending.delete(id);
+        openccAutoConvertRecent.set(id, Date.now());
+        autoConvertDisplayedById(id).catch(() => {});
+      }, waitMs);
+      openccAutoConvertPending.set(id, timer);
+    }
+    return;
+  }
+
+  openccAutoConvertRecent.set(id, now);
+  if (openccAutoConvertRecent.size > 200) {
+    for (const [k, ts] of openccAutoConvertRecent) {
+      if (now - ts > OPENCC_AUTO_CONVERT_DEDUPE_MS * 4) openccAutoConvertRecent.delete(k);
+    }
+  }
+
+  autoConvertDisplayedById(id).catch(() => {});
 };
 
 eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, (msgId) => {
-  autoConvertDisplayedById(msgId).catch(() => {});
+  triggerAutoConvertByEvent(msgId);
+});
+
+eventOn(tavern_events.MESSAGE_RECEIVED, (msgId) => {
+  triggerAutoConvertByEvent(msgId);
 });
 
 // 兼容其他腳本改寫訊息內容後的重渲染（例如 applyImagePromptInsertions）
 eventOn(tavern_events.MESSAGE_UPDATED, (msgId) => {
-  autoConvertDisplayedById(msgId).catch(() => {});
+  triggerAutoConvertByEvent(msgId);
 });
 
   console.log('[OpenCC] 腳本完成初始化');
