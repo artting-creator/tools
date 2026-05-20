@@ -1,4 +1,4 @@
-﻿  console.log("[OpenCC] script start");
+﻿  console.log("[OpenCC 2.5.2] script start");
   const opencc_local_file = '/opencc-js-1.0.5.esm.js';
   // 模組的路徑包含檔名，路徑從本地酒館根目錄開始。例如模組若在C:\AI\SillyTavern\public\localfile\opencc，就設為'/localfile/opencc/opencc-js-1.0.5.esm.js'
   // 若設為空或註解掉或找不到本地檔，會自動從網路抓
@@ -318,7 +318,7 @@ const convertCustomTags = async (text, mode, configs) => {
 
     for (const match of matches) {
       const inner = match[1] || '';  // 捕獲群組1，內容部分
-      const safeInner = String(inner).trim();
+      const safeInner = String(inner);
       const convertedInner = convert(safeInner, mode);
       const replacement = `${config.open}${convertedInner}${config.close}`;
 

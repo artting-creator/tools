@@ -60,5 +60,5 @@ opencc-js-1.0.5.esm.js：
 OpenCC.js：  
 腳本連結的檔案  
 
-OpenCCv2.5.1.json：  
+OpenCCv2.5.2.json：  
 酒館助手腳本-繁簡轉換器  
