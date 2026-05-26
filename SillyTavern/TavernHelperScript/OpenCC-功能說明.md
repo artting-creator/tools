@@ -1,4 +1,4 @@
-﻿## OpenCC.js 功能說明  
+## OpenCC.js 功能說明  
 
 此文件說明 `OpenCC.js` 的可操作功能與行為模式，重點包含：  
 - 可點選按鈕  
@@ -47,6 +47,7 @@
 - `CHARACTER_MESSAGE_RENDERED`  
 - `MESSAGE_RECEIVED`  
 - `MESSAGE_UPDATED`  
+- `MESSAGE_SWIPED`  
 
 觸發事件具體範例：  
 1. `CHARACTER_MESSAGE_RENDERED`  
@@ -54,12 +55,16 @@
 - 例：AI 正常回覆生成完成後，該樓顯示在介面  
 
 2. `MESSAGE_RECEIVED`  
-- 系統收到一則新訊息時觸發（帶 `message_id`）  
+- 系統收到一則新訊息時觸發（帶 `message_id` 或 `id`）  
 - 例：按下送出後收到 AI 新回覆；或 extension/指令流程新增一則回覆  
 
 3. `MESSAGE_UPDATED`  
 - 既有訊息內容被更新時觸發  
 - 例：其他腳本後處理（如插入內容、改寫文字）後刷新該樓  
+
+4. `MESSAGE_SWIPED`  
+- 切換分支時觸發  
+- 例：有分支訊息時，右下/左下方的小箭頭切換訊息  
 
 自動轉換流程（與本樓按鈕一致）：  
 1. 資料層標籤轉換  

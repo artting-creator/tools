@@ -1,4 +1,4 @@
-﻿  console.log("[OpenCC 2.5.2] script start");
+  console.log("[OpenCC 2.5.3] script start");
   const opencc_local_file = '/opencc-js-1.0.5.esm.js';
   // 模組的路徑包含檔名，路徑從本地酒館根目錄開始。例如模組若在C:\AI\SillyTavern\public\localfile\opencc，就設為'/localfile/opencc/opencc-js-1.0.5.esm.js'
   // 若設為空或註解掉或找不到本地檔，會自動從網路抓
@@ -1153,9 +1153,18 @@ const autoConvertDisplayedById = async (msgId) => {
 const OPENCC_AUTO_CONVERT_DEDUPE_MS = 500;
 const openccAutoConvertRecent = new Map();
 const openccAutoConvertPending = new Map();
-const triggerAutoConvertByEvent = (msgId) => {
+const resolveEventMsgId = (eventPayload) => {
+  if (typeof eventPayload === 'number' || typeof eventPayload === 'string') return eventPayload;
+  if (eventPayload && typeof eventPayload === 'object') {
+    if (eventPayload.message_id != null) return eventPayload.message_id;
+    if (eventPayload.id != null) return eventPayload.id;
+  }
+  return NaN;
+};
+
+const triggerAutoConvertByEvent = (eventPayload) => {
   if (openccManualConverting) return;
-  const id = Number(msgId);
+  const id = Number(resolveEventMsgId(eventPayload));
   if (!Number.isFinite(id) || id < 0) return;
 
   const now = Date.now();
@@ -1194,6 +1203,10 @@ eventOn(tavern_events.MESSAGE_RECEIVED, (msgId) => {
 
 // 兼容其他腳本改寫訊息內容後的重渲染（例如 applyImagePromptInsertions）
 eventOn(tavern_events.MESSAGE_UPDATED, (msgId) => {
+  triggerAutoConvertByEvent(msgId);
+});
+
+eventOn(tavern_events.MESSAGE_SWIPED, (msgId) => {
   triggerAutoConvertByEvent(msgId);
 });
 
