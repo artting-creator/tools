@@ -1,6 +1,6 @@
-  console.log("[OpenCC 2.5.3] script start");
+  console.log("[OpenCC 2.5.4] script start");
   const opencc_local_file = '/opencc-js-1.0.5.esm.js';
-  // 模組的路徑包含檔名，路徑從本地酒館根目錄開始。例如模組若在C:\AI\SillyTavern\public\localfile\opencc，就設為'/localfile/opencc/opencc-js-1.0.5.esm.js'
+  // 模組的路徑包含檔名，路徑從本地酒館根目錄開始。例如模組若在C:\AI\SillyTavern\public\localfile\opencc\+esm.js，就設為'/localfile/opencc/+esm.js'
   // 若設為空或註解掉或找不到本地檔，會自動從網路抓
 
 $('.opencc-btn').remove();
@@ -38,6 +38,15 @@ let convSimp = null;
 let convTradTWP = null; // 台版詞語轉繁
 let convTWPToSimp = null; // 台版詞語轉簡
 let openccManualConverting = false; // 手動本樓轉換期間，暫停自動轉換事件
+
+const getOpenCCTavernDocument = () => {
+  try {
+    if (window.parent && window.parent.document && window.parent.document.body) {
+      return window.parent.document;
+    }
+  } catch (e) {}
+  return document;
+};
 
 // OpenCC 模組載入：本地優先，CDN 備援
 const loadOpenCCModule = async () => {
@@ -644,6 +653,7 @@ appendInexistentScriptButtons([
     loadSetting();
     $('.th-custom-popup-ui').remove();
     $('.opencc-overlay').remove();
+    $(getOpenCCTavernDocument()).off('keydown.openccSettingUI');
 if (!document.getElementById('opencc-mobile-style')) {
   const style = document.createElement('style');
   style.id = 'opencc-mobile-style';
@@ -836,6 +846,12 @@ overflow-y:auto;
     `);
     $('body').append(popup);
 
+    const closeSettingUI = () => {
+      $(getOpenCCTavernDocument()).off('keydown.openccSettingUI');
+      popup.remove();
+      overlay.remove();
+    };
+
 // hover 切換繁簡說明（用 JS 控制，避免 CSS 衝突）
 const bindHelpToggle = (container) => {
   if (!container || !container.length) return;
@@ -865,8 +881,11 @@ bindHelpToggle(helpBlocks.eq(1));
                                        .on('mouseleave', function() { $(this).css('background', '#f44336'); });
 
     // 關閉事件
-    overlay.on('click', () => { popup.remove(); overlay.remove(); });
-    popup.find('.th-custom-popup-close').on('click', () => { popup.remove(); overlay.remove(); });
+    overlay.on('click', closeSettingUI);
+    popup.find('.th-custom-popup-close').on('click', closeSettingUI);
+    $(getOpenCCTavernDocument()).off('keydown.openccSettingUI').on('keydown.openccSettingUI', (e) => {
+      if (e.key === 'Escape') closeSettingUI();
+    });
     popup.on('click', e => e.stopPropagation());
 
     // checkbox 事件
