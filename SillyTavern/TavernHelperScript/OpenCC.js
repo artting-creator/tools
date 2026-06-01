@@ -1,4 +1,4 @@
-  console.log("[OpenCC 2.6] script start");
+  console.log("[OpenCC 2.7] script start");
   const opencc_local_file = '/opencc-js-1.0.5.esm.js';
   // 模組的路徑包含檔名，路徑從本地酒館根目錄開始。例如模組若在C:\AI\SillyTavern\public\localfile\opencc\+esm.js，就設為'/localfile/opencc/+esm.js'
   // 若設為空或註解掉或找不到本地檔，會自動從網路抓
@@ -305,7 +305,7 @@ const appendUniqueTag = (currentRaw, tagRaw) => {
 };
 
   /* 通用 tag 轉換函式（支援自訂前後綴） */
-const convertCustomTags = async (text, mode, configs) => {
+const convertCustomTags = (text, mode, configs) => {
   if (mode !== 'traditional' && mode !== 'simplified') return text;
   if (!configs.length) return text;
 
@@ -597,11 +597,13 @@ appendInexistentScriptButtons([
       設定項目
   ========================== */
   const settings = [
-    { id:'auto-trad', name:'回覆自動轉為繁體', state:false, type:'receive' },
-    { id:'auto-simp', name:'回覆自动转为简体', state:false, type:'receive' },
+    { id:'auto-trad', name:'收到訊息轉為繁體', state:false, type:'receive' },
+    { id:'auto-simp', name:'收到消息转为简体', state:false, type:'receive' },
+    { id:'send-trad', name:'傳送訊息轉為繁體', state:false, type:'send' },
+    { id:'send-simp', name:'发送消息转为简体', state:false, type:'send' },
     { id:'tag-trad',  name:'標籤內容保持繁體',   state:false, type:'tag' },
     { id:'tag-simp',  name:'标签内容保持简体',   state:false, type:'tag' },
-    { id:'hide-buttons', name:'不用按鈕', state:false, type:'ui' }
+    { id:'hide-buttons', name:'隱藏按鈕', state:false, type:'ui' }
   ];
 
   const getItem = id => settings.find(x => x.id === id);
@@ -615,11 +617,14 @@ appendInexistentScriptButtons([
       const data = JSON.parse(raw);
       if (typeof data.trad === 'boolean') setState('auto-trad', data.trad);
       if (typeof data.simp === 'boolean') setState('auto-simp', data.simp);
+      if (typeof data.sendTrad === 'boolean') setState('send-trad', data.sendTrad);
+      if (typeof data.sendSimp === 'boolean') setState('send-simp', data.sendSimp);
       if (typeof data.tagTrad === 'boolean') setState('tag-trad', data.tagTrad);
       if (typeof data.tagSimp === 'boolean') setState('tag-simp', data.tagSimp);
       if (typeof data.hide === 'boolean') setState('hide-buttons', data.hide);
 
       if (getState('auto-trad') && getState('auto-simp')) setState('auto-simp', false);
+      if (getState('send-trad') && getState('send-simp')) setState('send-simp', false);
       if (getState('tag-trad') && getState('tag-simp')) setState('tag-simp', false);
       saveSetting();
     } catch {}
@@ -629,6 +634,8 @@ appendInexistentScriptButtons([
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       trad: getState('auto-trad'),
       simp: getState('auto-simp'),
+      sendTrad: getState('send-trad'),
+      sendSimp: getState('send-simp'),
       tagTrad: getState('tag-trad'),
       tagSimp: getState('tag-simp'),
       hide: getState('hide-buttons')
@@ -678,6 +685,12 @@ if (!tavernDoc.getElementById('opencc-mobile-style')) {
     font-size:calc(1.4rem * var(--opencc-font-scale, 0.65));
   }
     }
+    #saved-tag-list-wrap > summary::-webkit-details-marker{
+      display:none;
+    }
+    #saved-tag-list-wrap > summary::marker{
+      content:'';
+    }
   `;
   tavernDoc.head.appendChild(style);
 }
@@ -702,19 +715,20 @@ if (!tavernDoc.getElementById('opencc-mobile-style')) {
     const fs = (size) => `calc(${size} * var(--opencc-font-scale, 0.65))`;
     const ui = {
       checkboxLabel: `margin:0; cursor:pointer; color:#eee; font-size:${fs('1.8rem')}; flex:1;`,
-      select: `width:100%; padding:8px; font-size:${fs('1.7rem')}; background:#2c2c2e; color:#eee; border:1px solid #555; border-radius:6px;`,
+      select: `width:100%; padding:8px; font-size:${fs('1.7rem')}; background:#28282b; color:#eee; border:1px solid #555; border-radius:6px; transition:background 0.15s ease, border-color 0.15s ease;`,
       input: `flex:1; padding:8px; font-size:${fs('1.7rem')}; background:#1e1e1e; color:#eee; border:1px solid #555; border-radius:6px; font-family:monospace;`,
       smallBtn: `white-space:nowrap; min-width:3.2em; padding:6px 8px; font-size:${fs('1.6rem')}; line-height:1; box-sizing:border-box;`,
       smallBtnFixed: `white-space:nowrap; width:3.2em; padding:6px 0; font-size:${fs('1.6rem')}; line-height:1; box-sizing:border-box;`,
       helpText: `margin-top:6px; font-size:${fs('1.6rem')}; color:#aaa; line-height:1.4;`,
       summary: `cursor:pointer; color:#ddd; font-size:${fs('1.7rem')}; list-style:none;`,
     };
-    const checkboxes = settings.map(item => `
+    const renderCheckbox = (item, extraStyle = '') => `
  <div style="
   display:flex;
   align-items:center;
   margin-bottom:10px; /* 間距 */
   gap:10px; /* 間隔 */
+  ${extraStyle}
 ">
         <input type="checkbox" id="${item.id}" ${item.state ? 'checked' : ''}
 style="
@@ -729,16 +743,39 @@ cursor:pointer;
           ${item.name}
         </label>
       </div>
+    `;
+    const mainSettings = settings.filter(item => item.id !== 'hide-buttons');
+    const checkboxes = mainSettings.map((item, index) => `
+      ${renderCheckbox(item)}
+      ${index % 2 === 1 && index < mainSettings.length - 1 ? '<div style="height:1px; margin:-2px 0 6px; background:rgba(255,255,255,0.28);"></div>' : ''}
     `).join('');
+    const hideButtonsControl = renderCheckbox(getItem('hide-buttons'), 'margin:0;');
+
+const variantOptions = [
+  { value: 't', label: '官版繁體 (t)', toastLabel: '官版繁體' },
+  { value: 'tw', label: '台版繁體 (tw)', toastLabel: '台版繁體' },
+  { value: 'hk', label: '港版繁體 (hk)', toastLabel: '港版繁體' },
+  { value: 'twp', label: '台版繁體+詞語转换 (twp)', toastLabel: '台版繁體+詞語轉換' },
+];
+const currentVariantValue = localStorage.getItem(VARIANT_STORAGE_KEY) || DEFAULT_VARIANT;
+const currentVariantOption = variantOptions.find(option => option.value === currentVariantValue) || variantOptions[0];
 
 const variantSection = `
   <div style="margin-top: 8px;">
-    <select id="trad-variant" style="${ui.select}">
-      <option value="t" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 't' || !localStorage.getItem(VARIANT_STORAGE_KEY) ? 'selected' : ''}>官版繁體 (t)</option>
-      <option value="tw" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'tw' ? 'selected' : ''}>台版繁體 (tw)</option>
-      <option value="hk" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'hk' ? 'selected' : ''}>港版繁體 (hk)</option>
-      <option value="twp" ${localStorage.getItem(VARIANT_STORAGE_KEY) === 'twp' ? 'selected' : ''}>台版繁體+詞語转换 (twp)</option>
-    </select>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <div style="flex:0 0 auto;">${hideButtonsControl}</div>
+      <div id="trad-variant-wrap" style="position:relative; flex:1; min-width:0;">
+        <button type="button" id="trad-variant-toggle" class="menu_button" style="${ui.select} display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; margin:0;">
+          <span id="trad-variant-label">${currentVariantOption.label}</span>
+          <span id="trad-variant-arrow" style="font-size:${fs('1.3rem')}; line-height:1;">▼</span>
+        </button>
+        <div id="trad-variant-menu" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:1000000; background:#1f1f20; border:1px solid #555; border-radius:6px; box-shadow:0 8px 18px rgba(0,0,0,0.45); overflow:hidden;">
+          ${variantOptions.map((option) => `
+            <button type="button" class="trad-variant-option menu_button" data-variant-value="${option.value}" style="display:block; width:100%; margin:0; padding:8px; border:0; border-left:3px solid transparent; border-radius:0; text-align:left; font-size:${fs('1.7rem')}; line-height:1.2; background:#1f1f20; color:#eee; transition:background 0.15s ease, border-color 0.15s ease;">${option.label}</button>
+          `).join('')}
+        </div>
+      </div>
+    </div>
     <div class="tag-help" style="${ui.helpText}">
       <div class="trad-text">
         繁體版本影響：輸入框、本樓、自動回覆、標籤內容的所有繁體轉換
@@ -753,25 +790,42 @@ const variantSection = `
 
     const customTagValue = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
 
+const tagPresetOptions = [
+  { value: '[IMG]', label: '例一：[tag][/tag]成對中括號' },
+  { value: '<action>', label: '例二：<tag></tag>成對尖括號' },
+  { value: '<IMG prompt=|>', label: '例三：豎線前tag1|豎線後tag2' },
+  { value: '[IMG_GEN],< |」', label: '例四：多組之間用逗號' },
+];
+
 const tagSection = `
-  <div style="margin-top: 8px;">    <select id="tag-preset" style="${ui.select} margin-bottom:8px;">
-      <option value="" selected disabled>標籤設定範例</option>
-      <option value="[IMG]">例一：[tag][/tag]成對中括號</option>
-      <option value="<action>">例二：&lt;tag&gt;&lt;/tag&gt;成對尖括號</option>
-      <option value="<IMG prompt=|>">例三：豎線前tag1|豎線後tag2</option>
-      <option value="[IMG_GEN],< |」">例四：多組之間用逗號</option>
-    </select>
+  <div style="margin-top: 8px;">
+    <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+      <div id="tag-preset-wrap" style="position:relative; flex:1; min-width:0;">
+        <button type="button" id="tag-preset-toggle" class="menu_button" style="${ui.select} display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; margin:0;">
+          <span>標籤設定範例</span>
+          <span id="tag-preset-arrow" style="font-size:${fs('1.3rem')}; line-height:1;">▼</span>
+        </button>
+        <div id="tag-preset-menu" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:1000000; background:#1f1f20; border:1px solid #555; border-radius:6px; box-shadow:0 8px 18px rgba(0,0,0,0.45); overflow:hidden;">
+          ${tagPresetOptions.map((option) => `
+            <button type="button" class="tag-preset-option menu_button" data-tag-value="${option.value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" style="display:block; width:100%; margin:0; padding:8px; border:0; border-left:3px solid transparent; border-radius:0; text-align:left; font-size:${fs('1.7rem')}; line-height:1.2; background:#1f1f20; color:#eee; transition:background 0.15s ease, border-color 0.15s ease;">${option.label.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</button>
+          `).join('')}
+        </div>
+      </div>
+      <button type="button" id="save-custom-tag-btn" class="menu_button" style="${ui.smallBtn}">保存</button>
+      <button type="button" id="clear-custom-tag-btn" class="menu_button" style="${ui.smallBtn}">清除</button>
+    </div>
     <div style="display:flex; gap:8px; align-items:center;">
       <input type="text" id="custom-tag-input" value="${customTagValue}"
              placeholder="[tag] 或 <tag> 或 prefix|suffix"
 style="${ui.input}">
-      <button type="button" id="save-custom-tag-btn" class="menu_button" style="${ui.smallBtnFixed}">保存</button>
-      <button type="button" id="clear-custom-tag-btn" class="menu_button" style="${ui.smallBtnFixed}">清除</button>
     </div>
     <details id="saved-tag-list-wrap" style="margin-top:8px; border:1px solid #555; border-radius:6px; padding:8px; background:#1f1f20;">
-      <summary style="${ui.summary}">
-        <span style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <span>自訂標籤列表</span>
+      <summary style="${ui.summary} display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0; line-height:1.2;">
+        <span style="display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span>自訂標籤列表</span>
+            <span id="saved-tag-list-arrow" style="font-size:${fs('1.3rem')}; line-height:1;">▼</span>
+          </span>
           <span style="display:flex; align-items:center; gap:6px;">
             <button type="button" id="import-tag-list-btn" class="menu_button" style="${ui.smallBtn}">導入</button>
             <button type="button" id="export-tag-list-btn" class="menu_button" style="${ui.smallBtn}">導出</button>
@@ -839,8 +893,8 @@ flex-direction:column;
           </div>
         </div>
         ${checkboxes}
-        ${tagSection}
 		${variantSection}
+        ${tagSection}
         </div>
         <button type="button" class="menu_button th-custom-popup-close" style="
           flex-shrink:0; margin-top:6px; width:100%; padding:6px; background:#f44336; color:white;
@@ -908,6 +962,10 @@ bindHelpToggle(helpBlocks.eq(1));
           settings.filter(x => x.type === 'tag' && x.id !== item.id)
             .forEach(x => { setState(x.id, false); popup.find(`#${x.id}`).prop('checked', false); });
         }
+        if (item.type === 'send' && checked) {
+          settings.filter(x => x.type === 'send' && x.id !== item.id)
+            .forEach(x => { setState(x.id, false); popup.find(`#${x.id}`).prop('checked', false); });
+        }
 
         saveSetting();
         toggleButtonsVisibility();
@@ -916,12 +974,20 @@ bindHelpToggle(helpBlocks.eq(1));
     });
 
     // 自訂標籤輸入事件
-    const presetSelect = popup.find('#tag-preset');
+    const presetWrap = popup.find('#tag-preset-wrap');
+    const presetToggle = popup.find('#tag-preset-toggle');
+    const presetArrow = popup.find('#tag-preset-arrow');
+    const presetMenu = popup.find('#tag-preset-menu');
     const tagInput = popup.find('#custom-tag-input');
-const variantSelect = popup.find('#trad-variant');
+    const variantWrap = popup.find('#trad-variant-wrap');
+    const variantToggle = popup.find('#trad-variant-toggle');
+    const variantLabel = popup.find('#trad-variant-label');
+    const variantMenu = popup.find('#trad-variant-menu');
+    const variantArrow = popup.find('#trad-variant-arrow');
     const saveTagBtn = popup.find('#save-custom-tag-btn');
     const clearTagBtn = popup.find('#clear-custom-tag-btn');
     const savedTagWrap = popup.find('#saved-tag-list-wrap');
+    const savedTagArrow = popup.find('#saved-tag-list-arrow');
     const savedTagList = popup.find('#saved-tag-list');
     const importTagListBtn = popup.find('#import-tag-list-btn');
     const exportTagListBtn = popup.find('#export-tag-list-btn');
@@ -930,6 +996,23 @@ const variantSelect = popup.find('#trad-variant');
     const fontDecBtn = popup.find('#opencc-font-dec');
     const fontResetBtn = popup.find('#opencc-font-reset');
     const fontIncBtn = popup.find('#opencc-font-inc');
+    const applySelectHover = (el, active) => {
+      $(el).css({
+        background: active ? '#303036' : '#28282b',
+        borderColor: active ? '#777' : '#555',
+      });
+    };
+    savedTagWrap.on('toggle', function() {
+      savedTagArrow.text(this.open ? '▲' : '▼');
+    });
+    const setPresetMenuOpen = (open) => {
+      presetMenu.toggle(open);
+      presetArrow.text(open ? '▲' : '▼');
+    };
+    const setVariantMenuOpen = (open) => {
+      variantMenu.toggle(open);
+      variantArrow.text(open ? '▲' : '▼');
+    };
 
     const applyPopupFontSize = (nextPercent) => {
       const finalPercent = setUIFontSizePercent(nextPercent);
@@ -1011,14 +1094,61 @@ const variantSelect = popup.find('#trad-variant');
     };
     renderSavedTagList();
 
-    presetSelect.on('change', function() {
-      const val = this.value;
+    presetToggle.on('click', function(e) {
+      e.stopPropagation();
+      setPresetMenuOpen(!presetMenu.is(':visible'));
+    });
+    presetToggle.on('mouseenter focus', function() { applySelectHover(this, true); })
+                .on('mouseleave blur', function() { applySelectHover(this, false); });
+
+    presetMenu.on('mouseenter', '.tag-preset-option', function() {
+      $(this).css({ background: '#34343a', borderLeftColor: '#f44336' });
+    }).on('mouseleave', '.tag-preset-option', function() {
+      $(this).css({ background: '#1f1f20', borderLeftColor: 'transparent' });
+    });
+
+    variantToggle.on('click', function(e) {
+      e.stopPropagation();
+      setPresetMenuOpen(false);
+      setVariantMenuOpen(!variantMenu.is(':visible'));
+    });
+    variantToggle.on('mouseenter focus', function() { applySelectHover(this, true); })
+                 .on('mouseleave blur', function() { applySelectHover(this, false); });
+
+    variantMenu.on('mouseenter', '.trad-variant-option', function() {
+      $(this).css({ background: '#34343a', borderLeftColor: '#f44336' });
+    }).on('mouseleave', '.trad-variant-option', function() {
+      $(this).css({ background: '#1f1f20', borderLeftColor: 'transparent' });
+    });
+
+    variantMenu.on('click', '.trad-variant-option', function(e) {
+      e.stopPropagation();
+      const val = String($(this).data('variant-value') ?? DEFAULT_VARIANT);
+      const selected = variantOptions.find(option => option.value === val) || variantOptions[0];
+      localStorage.setItem(VARIANT_STORAGE_KEY, selected.value);
+      variantLabel.text(selected.label);
+      setVariantMenuOpen(false);
+      toast('success', `已切換為 ${selected.toastLabel}`, '', { timeOut: 1100 });
+      console.log('variant:', selected.value);
+      console.log('convTradTWP:', convTradTWP);
+    });
+
+    presetMenu.on('click', '.tag-preset-option', function(e) {
+      e.stopPropagation();
+      const val = String($(this).data('tag-value') ?? '');
       if (!val) return;
       tagInput.val(val);
       tagInput.trigger('focus');
       localStorage.setItem(TAG_STORAGE_KEY, val);
       toast('success', '已套用範例標籤', '', { timeOut: 1000 });
-      this.value = '';
+      setPresetMenuOpen(false);
+    });
+
+    presetWrap.on('click', function(e) { e.stopPropagation(); });
+    variantWrap.on('click', function(e) { e.stopPropagation(); });
+    popup.on('click.tagPresetMenu', () => {
+      setPresetMenuOpen(false);
+      setVariantMenuOpen(false);
     });
 
     tagInput.on('input', function() {
@@ -1087,23 +1217,6 @@ const variantSelect = popup.find('#trad-variant');
       reader.readAsText(file, 'utf-8');
     });
 
-// 新增：繁體變體選擇
-variantSelect.on('change', function() {
-  const val = this.value;
-  localStorage.setItem(VARIANT_STORAGE_KEY, val);
-
-let labelt = '官版繁體';
-if (val === 'tw') labelt = '台版繁體';
-else if (val === 'hk') labelt = '港版繁體';
-else if (val === 'twp') labelt = '台版繁體+詞語轉換';
-
-toast('success', `已切換為 ${labelt}`, '', { timeOut: 1100 });
-
-  console.log('variant:', val);
-  console.log('convTradTWP:', convTradTWP);
-});
-
-
   };
 
   /* =========================
@@ -1137,6 +1250,111 @@ const btn = $(`
 
 
 // （已停用）舊版 IntersectionObserver 自動轉換，避免干擾目前顯示層/資料層流程
+
+  /* =========================
+      傳送前自動轉換使用者訊息
+  ========================== */
+const getSendMode = () => getState('send-trad') ? 'traditional' :
+                     getState('send-simp') ? 'simplified' : null;
+
+const getTagMode = () => getState('tag-trad') ? 'traditional' :
+                    getState('tag-simp') ? 'simplified' : null;
+
+const convertOutgoingText = (text, mode) => {
+  let converted = convert(text, mode);
+  const tagMode = getTagMode();
+  if (!tagMode) return converted;
+
+  const tagInput = localStorage.getItem(TAG_STORAGE_KEY) || '[IMG_GEN]';
+  const tagConfigs = parseCustomTags(tagInput);
+  if (!tagConfigs.length) return converted;
+
+  return convertCustomTags(converted, tagMode, tagConfigs);
+};
+
+const convertOutgoingTextarea = () => {
+  const mode = getSendMode();
+  if (!mode) return false;
+
+  const tavernDoc = getOpenCCTavernDocument();
+  const input = $('#send_textarea', tavernDoc);
+  if (!input.length) return false;
+
+  const original = String(input.val() ?? '');
+  if (!original.trim()) return false;
+
+  const converted = convertOutgoingText(original, mode);
+  if (converted === original) return false;
+
+  input.val(converted).trigger('input');
+  return true;
+};
+
+const convertLatestUserMessageBeforeGeneration = async () => {
+  const mode = getSendMode();
+  if (!mode) return;
+
+  await ensureConverter();
+
+  const lastMessageId = getLastMessageId();
+  if (lastMessageId < 0) return;
+
+  const messages = getChatMessages(`0-${lastMessageId}`);
+  if (!messages?.length) return;
+
+  let latestUserMessage = null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (String(messages[i].role || '') === 'user') {
+      latestUserMessage = messages[i];
+      break;
+    }
+  }
+  if (!latestUserMessage) return;
+
+  const original = String(latestUserMessage.message ?? '');
+  if (!original.trim()) return;
+
+  const converted = convertOutgoingText(original, mode);
+  if (converted === original) return;
+
+  await setChatMessages(
+    [{ message_id: latestUserMessage.message_id, message: converted }],
+    { refresh: 'affected' }
+  );
+};
+
+const bindOutgoingMessageConvertHandlers = () => {
+  const tavernDoc = getOpenCCTavernDocument();
+  const tavernWin = tavernDoc.defaultView || window;
+
+  if (typeof tavernWin.__openccSendConvertCleanup === 'function') {
+    tavernWin.__openccSendConvertCleanup();
+  }
+
+  const handleSendClick = (event) => {
+    if (!event.target?.closest?.('#send_but')) return;
+    convertOutgoingTextarea();
+  };
+
+  const handleTextareaEnter = (event) => {
+    if (!event.target?.matches?.('#send_textarea')) return;
+    if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+    convertOutgoingTextarea();
+  };
+
+  tavernDoc.addEventListener('click', handleSendClick, true);
+  tavernDoc.addEventListener('keydown', handleTextareaEnter, true);
+  tavernWin.__openccSendConvertCleanup = () => {
+    tavernDoc.removeEventListener('click', handleSendClick, true);
+    tavernDoc.removeEventListener('keydown', handleTextareaEnter, true);
+  };
+};
+
+bindOutgoingMessageConvertHandlers();
+
+eventOn(tavern_events.GENERATION_AFTER_COMMANDS, () => {
+  return convertLatestUserMessageBeforeGeneration();
+});
 
   /* =========================
       自動轉換回覆（顯示層）
